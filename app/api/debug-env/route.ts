@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isMockMode } from "@/lib/supabase";
 
+// Forzar actualización de despliegue en Vercel - Actualizado el 2026-05-24
 export const dynamic = "force-dynamic";
 
 export async function GET() {
