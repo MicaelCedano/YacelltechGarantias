@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { isMockMode, supabase } from "@/lib/supabase";
 import { getMockConduces, saveMockConduce } from "@/lib/mockDb";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     if (isMockMode()) {

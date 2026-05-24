@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { isMockMode, supabase } from "@/lib/supabase";
 import { getMockCases } from "@/lib/mockDb";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     // Si estamos en modo de prueba local sin credenciales

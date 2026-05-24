@@ -40,3 +40,8 @@ local_db.json
 conduces_db.json
 /backups/
 
+# test and migration scripts
+test-supabase.js
+migrate-to-supabase.js
+
+
