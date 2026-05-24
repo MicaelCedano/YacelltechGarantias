@@ -1,7 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder-project.supabase.co";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "placeholder-anon-key";
+// Sanitizar y validar la URL y Clave de Supabase para evitar caídas en el build de Vercel
+let rawUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim();
+const supabaseUrl = (rawUrl.startsWith("http://") || rawUrl.startsWith("https://"))
+  ? rawUrl
+  : "https://placeholder-project.supabase.co";
+
+let rawKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "").trim();
+const supabaseAnonKey = rawKey || "placeholder-anon-key";
 
 /**
  * Retorna true si no están definidas las variables de entorno de Supabase,
