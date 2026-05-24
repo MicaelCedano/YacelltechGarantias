@@ -34,3 +34,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local database files and backups
+local_db.json
+conduces_db.json
+/backups/
+

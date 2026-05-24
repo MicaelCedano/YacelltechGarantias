@@ -3,25 +3,126 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0f0f0f;
+  --foreground: #f3f4f6;
+  --accent: #F59E0B;
+  --accent-hover: #D97706;
+  --border-color: #262626;
+  --input-bg: #151515;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* Base Terminal styling */
 body {
   color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--background);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  overflow-x: hidden;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+/* Background Grain Overlay */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  opacity: 0.035;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  z-index: 9999;
+}
+
+/* Selection style */
+::selection {
+  background-color: var(--accent);
+  color: #000000;
+}
+
+/* Custom Scrollbar for Terminal style */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0f0f0f;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #262626;
+  border: 1px solid #1a1a1a;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent);
+}
+
+/* Utilitarian Forms */
+input, select, textarea {
+  background-color: var(--input-bg);
+  border: 1px solid var(--border-color);
+  color: var(--foreground);
+  outline: none;
+  transition: all 0.15s ease-in-out;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+input::placeholder, textarea::placeholder {
+  color: #525252;
+}
+
+/* Utility classes for terminal aesthetics */
+.font-mono-terminal {
+  font-family: var(--font-mono), ui-monospace, monospace;
+}
+
+.font-sans-sora {
+  font-family: var(--font-sora), sans-serif;
+}
+
+/* Print CSS overrides */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    background-image: none !important;
+    font-family: sans-serif !important;
+  }
+  
+  body::before {
+    display: none !important;
+  }
+
+  input, select, textarea, button, .no-print {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .print-border {
+    border: 1px solid #000000 !important;
+  }
+
+  .print-text-black {
+    color: #000000 !important;
+  }
+  
+  /* Reset container widths for clean layouts */
+  .print-w-full {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Force background colors on print if supported */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }
