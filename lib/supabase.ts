@@ -1,12 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 
 // Sanitizar y validar la URL y Clave de Supabase para evitar caídas en el build de Vercel
-let rawUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim();
+const rawUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim();
 const supabaseUrl = (rawUrl.startsWith("http://") || rawUrl.startsWith("https://"))
   ? rawUrl
   : "https://placeholder-project.supabase.co";
 
-let rawKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "").trim();
+const rawKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY || "").trim();
 const supabaseAnonKey = rawKey || "placeholder-anon-key";
 
 /**
