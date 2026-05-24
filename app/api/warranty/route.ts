@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { isMockMode, supabase } from "@/lib/supabase";
 import { getMockCases } from "@/lib/mockDb";
 
+// Forzar reconstrucción de API para instanciar cliente de Supabase con URL corregida
 export const dynamic = "force-dynamic";
 
 export async function GET() {
