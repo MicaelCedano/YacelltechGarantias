@@ -135,15 +135,16 @@ export async function loginUser(email: string, password: string) {
     }
 
     // 2. AUTENTICACIÓN EN MODO REAL CON SUPABASE
+    const finalEmail = email.includes("@") ? email.trim() : `${email.trim()}@yacelltech.com`;
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
+      email: finalEmail,
       password,
     });
 
     if (error) {
       console.error("Error en signInWithPassword:", error);
       let userFriendlyError = error.message;
-      if (error.message.includes("Invalid login credentials")) {
+      if (error.message.includes("Invalid login credentials") || error.message.includes("invalid claim")) {
         userFriendlyError = "Credenciales incorrectas. Verifique su correo y contraseña.";
       }
       return { success: false, error: userFriendlyError };
