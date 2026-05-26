@@ -97,12 +97,18 @@ export default function HistorialConducesPage() {
     return matchesSearch && matchesDate;
   });
 
-  // Manejar Reimpresión de Conduce
-  const handleReprint = (item: ConduceRecord) => {
+  // Obtener URL de Reimpresión de Conduce
+  const getReprintUrl = (item: ConduceRecord) => {
     const codesParam = item.case_codes.join(",");
     const isSupplier = item.id.startsWith("SUPL-");
-    const url = `/conduce?cases=${codesParam}${isSupplier ? `&type=suplidor&suplidor=${encodeURIComponent(item.client_name)}` : ""}`;
-    window.open(url, "_blank");
+    const isTech = item.id.startsWith("TECN-");
+    
+    if (isSupplier) {
+      return `/conduce?cases=${codesParam}&type=suplidor&suplidor=${encodeURIComponent(item.client_name)}`;
+    } else if (isTech) {
+      return `/conduce?cases=${codesParam}&type=tecnico&tecnico=${encodeURIComponent(item.client_name)}`;
+    }
+    return `/conduce?cases=${codesParam}`;
   };
 
   return (
@@ -260,6 +266,11 @@ export default function HistorialConducesPage() {
                               MARCA / SUPLIDOR
                             </span>
                           )}
+                          {item.id.startsWith("TECN-") && (
+                            <span className="ml-2 px-1.5 py-0.5 bg-amber-950 border border-amber-800 text-amber-500 text-[8px] font-mono-terminal uppercase font-bold tracking-wider rounded-none">
+                              TÉCNICO INTERNO
+                            </span>
+                          )}
                         </div>
                       </td>
 
@@ -290,14 +301,16 @@ export default function HistorialConducesPage() {
 
                       {/* Acción de Reimpresión */}
                       <td className="p-3.5 text-center no-print">
-                        <button
-                          onClick={() => handleReprint(item)}
-                          className="px-3 py-1.5 border border-zinc-800 hover:border-amber-500 bg-zinc-950 hover:bg-amber-500 text-zinc-400 hover:text-black transition-all inline-flex items-center gap-1.5 cursor-pointer font-mono-terminal text-[10px] tracking-wider rounded-none font-bold"
+                        <a
+                          href={getReprintUrl(item)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1.5 border border-zinc-800 hover:border-amber-500 bg-zinc-950 hover:bg-amber-500 text-zinc-400 hover:text-black transition-all inline-flex items-center gap-1.5 cursor-pointer font-mono-terminal text-[10px] tracking-wider rounded-none font-bold no-underline"
                           title="Reimprimir Conduce de Entrega"
                         >
                           <Printer className="w-3.5 h-3.5" />
                           <span>Reimprimir</span>
-                        </button>
+                        </a>
                       </td>
                     </tr>
                   );
