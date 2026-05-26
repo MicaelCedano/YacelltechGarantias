@@ -1,6 +1,12 @@
 import React from "react";
 
-export type WarrantyStatus = "En reparación" | "Enviado al suplidor" | "Recibido del suplidor" | "Entregado";
+export type WarrantyStatus =
+  | "Recibido"
+  | "En reparación"
+  | "Recibido del técnico"
+  | "Enviado al suplidor"
+  | "Recibido del suplidor"
+  | "Entregado";
 
 interface StatusBadgeProps {
   status: WarrantyStatus | string;
@@ -13,10 +19,20 @@ export function StatusBadge({ status, className = "" }: StatusBadgeProps) {
   let textClass = "";
 
   switch (status) {
+    case "Recibido":
+      bgClass = "bg-teal-650";
+      borderClass = "border-teal-700";
+      textClass = "text-white font-bold";
+      break;
     case "En reparación":
       bgClass = "bg-amber-500";
       borderClass = "border-amber-650";
       textClass = "text-black font-bold";
+      break;
+    case "Recibido del técnico":
+      bgClass = "bg-emerald-650";
+      borderClass = "border-emerald-700";
+      textClass = "text-white font-bold";
       break;
     case "Enviado al suplidor":
       bgClass = "bg-blue-600";

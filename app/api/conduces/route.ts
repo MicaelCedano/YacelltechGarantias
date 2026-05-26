@@ -38,7 +38,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { client_name, case_codes, is_supplier } = body;
+    const { client_name, case_codes, is_supplier, is_tech } = body;
 
     if (!client_name || !case_codes || !Array.isArray(case_codes) || case_codes.length === 0) {
       return NextResponse.json(
@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
         delivery_date: todayStr,
         case_codes,
         is_supplier: !!is_supplier,
+        is_tech: !!is_tech,
       });
       return NextResponse.json({ success: true, data: record });
     }
@@ -67,6 +68,7 @@ export async function POST(request: NextRequest) {
       delivery_date: todayStr,
       case_codes,
       is_supplier: !!is_supplier,
+      is_tech: !!is_tech,
     });
 
     const { data, error } = await supabase

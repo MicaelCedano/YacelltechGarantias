@@ -11,6 +11,7 @@ interface ConducePageProps {
     cases?: string;
     type?: string;
     suplidor?: string;
+    tecnico?: string;
   };
 }
 
@@ -50,9 +51,10 @@ export default async function ConducePage({ searchParams }: ConducePageProps) {
   // Cliente común del despacho (primero de la lista)
   const clientName = items[0].client_name;
   
-  // Determinar si es un conduce de suplidor
+  // Determinar si es un conduce de suplidor o de técnico
   const isSupplier = searchParams.type === "suplidor";
-  const supplierName = searchParams.suplidor || clientName;
+  const isTech = searchParams.type === "tecnico";
+  const targetName = searchParams.suplidor || searchParams.tecnico || clientName;
 
   // Fecha de entrega local formateada (Hoy)
   const getTodayFormatted = () => {
@@ -64,6 +66,60 @@ export default async function ConducePage({ searchParams }: ConducePageProps) {
     };
     return today.toLocaleDateString("es-ES", options);
   };
+
+  // Títulos dinámicos de sección
+  let moduleTitle = "DESPACHO DE EQUIPOS";
+  if (isSupplier) moduleTitle = "ENVÍO A LA MARCA";
+  else if (isTech) moduleTitle = "ASIGNACIÓN A TÉCNICO";
+
+  let docTitle = "CONDUCE DE ENTREGA";
+  if (isSupplier) docTitle = "CONDUCE DE ENVÍO A LA MARCA";
+  else if (isTech) docTitle = "CONDUCE DE ASIGNACIÓN A TÉCNICO";
+
+  let detailTitle = "Datos del Receptor";
+  if (isSupplier) detailTitle = "Datos de la Marca / Suplidor";
+  else if (isTech) detailTitle = "Datos del Técnico";
+
+  let userLabel = "Cliente";
+  if (isSupplier) userLabel = "Marca / Proveedor";
+  else if (isTech) userLabel = "Técnico Asignado";
+
+  let dateLabel = "Fecha de Entrega";
+  if (isSupplier) dateLabel = "Fecha de Envío";
+  else if (isTech) dateLabel = "Fecha de Asignación";
+
+  let tableSubtitle = `Detalle de Equipos Entregados (${items.length})`;
+  if (isSupplier) tableSubtitle = `Detalle de Equipos Enviados (${items.length})`;
+  else if (isTech) tableSubtitle = `Detalle de Equipos Asignados (${items.length})`;
+
+  let policyText = (
+    <>
+      <strong>CONFORMIDAD DE RECEPCIÓN:</strong> Por medio de la firma de este conduce, el cliente certifica que recibe los equipos arriba descritos a su entera satisfacción, debidamente reparados, probados y funcionando bajo las condiciones de garantía especificadas.
+    </>
+  );
+  let policyColor = "text-emerald-600";
+  if (isSupplier) {
+    policyText = (
+      <>
+        <strong>ENVÍO A SOPORTE TÉCNICO:</strong> Se hace constar que los dispositivos detallados en este conduce son enviados a soporte técnico oficial de la marca para su debida revisión y reparación bajo los términos de garantía.
+      </>
+    );
+    policyColor = "text-blue-600";
+  } else if (isTech) {
+    policyText = (
+      <>
+        <strong>ASIGNACIÓN INTERNA DE REPARACIÓN:</strong> Se hace constar que los dispositivos descritos son asignados internamente al técnico de taller para su respectiva reparación física de hardware y/o software en nuestras instalaciones.
+      </>
+    );
+    policyColor = "text-amber-500";
+  }
+
+  let signatureLeft = "Recibido Conforme (Cliente)";
+  if (isSupplier) signatureLeft = "Recibido por (Marca / Suplidor)";
+  else if (isTech) signatureLeft = "Recibido por (Técnico Asignado)";
+
+  let signatureRight = "Entregado Por (Taller)";
+  if (isTech) signatureRight = "Asignado Por (Supervisor)";
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-[#f3f4f6] font-sans-sora flex flex-col items-center p-4 md:p-8 w-full print:bg-white print:text-black">
@@ -77,9 +133,9 @@ export default async function ConducePage({ searchParams }: ConducePageProps) {
           <ArrowLeft className="w-4 h-4" />
           <span>Volver al Dashboard</span>
         </Link>
-        <span className="text-[10px] text-zinc-600 font-mono-terminal uppercase tracking-widest flex items-center gap-1">
+        <span className="text-[10px] text-zinc-650 font-mono-terminal uppercase tracking-widest flex items-center gap-1">
           <Layers className="w-3.5 h-3.5" />
-          <span>Señal Digital - {isSupplier ? "ENVÍO A LA MARCA" : "DESPACHO DE EQUIPOS"}</span>
+          <span>Señal Digital - {moduleTitle}</span>
         </span>
       </div>
 
@@ -105,7 +161,7 @@ export default async function ConducePage({ searchParams }: ConducePageProps) {
 
           <div className="text-center sm:text-right flex flex-col gap-1">
             <span className="text-xs font-bold bg-black text-white px-3 py-1 font-mono-terminal tracking-wider inline-block uppercase select-none print:border print:border-black">
-              {isSupplier ? "CONDUCE DE ENVÍO A LA MARCA" : "CONDUCE DE ENTREGA"}
+              {docTitle}
             </span>
             <span className="text-[10px] font-mono-terminal text-zinc-700 font-semibold mt-1">
               RNC: 132-45678-9 (Temp)
@@ -116,20 +172,20 @@ export default async function ConducePage({ searchParams }: ConducePageProps) {
         {/* Detalles de la Entrega */}
         <div className="mb-6">
           <h3 className="text-xs font-mono-terminal font-bold uppercase tracking-wider text-zinc-800 border-b border-zinc-400 pb-1 mb-3">
-            {isSupplier ? "Datos de la Marca / Suplidor" : "Datos del Receptor"}
+            {detailTitle}
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div className="flex items-center gap-2">
               <User className="w-4 h-4 text-zinc-550" />
               <div>
-                <span className="text-zinc-500 uppercase text-[9px] block">{isSupplier ? "Marca / Proveedor" : "Cliente"}</span>
-                <span className="font-bold text-zinc-900">{isSupplier ? supplierName : clientName}</span>
+                <span className="text-zinc-500 uppercase text-[9px] block">{userLabel}</span>
+                <span className="font-bold text-zinc-900">{targetName}</span>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-zinc-500" />
               <div>
-                <span className="text-zinc-500 uppercase text-[9px] block">{isSupplier ? "Fecha de Envío" : "Fecha de Entrega"}</span>
+                <span className="text-zinc-500 uppercase text-[9px] block">{dateLabel}</span>
                 <span className="font-bold text-zinc-900">{getTodayFormatted()}</span>
               </div>
             </div>
@@ -139,7 +195,7 @@ export default async function ConducePage({ searchParams }: ConducePageProps) {
         {/* Detalle de los Equipos Entregados */}
         <div className="mb-8">
           <h3 className="text-xs font-mono-terminal font-bold uppercase tracking-wider text-zinc-800 border-b border-zinc-400 pb-1 mb-3">
-            {isSupplier ? `Detalle de Equipos Enviados (${items.length})` : `Detalle de Equipos Entregados (${items.length})`}
+            {tableSubtitle}
           </h3>
           
           <table className="w-full text-left border-collapse text-xs border border-zinc-300">
@@ -165,17 +221,9 @@ export default async function ConducePage({ searchParams }: ConducePageProps) {
         {/* Declaración de conformidad */}
         <div className="mb-10 p-4 border border-zinc-300 bg-zinc-50 text-[11px] leading-relaxed text-zinc-800">
           <div className="flex gap-2.5 items-start">
-            <ShieldCheck className={`w-5 h-5 ${isSupplier ? "text-blue-600" : "text-emerald-600"} shrink-0 mt-0.5`} />
+            <ShieldCheck className={`w-5 h-5 ${policyColor} shrink-0 mt-0.5`} />
             <p>
-              {isSupplier ? (
-                <>
-                  <strong>ENVÍO A SOPORTE TÉCNICO:</strong> Se hace constar que los dispositivos detallados en este conduce son enviados a soporte técnico oficial de la marca para su debida revisión y reparación bajo los términos de garantía.
-                </>
-              ) : (
-                <>
-                  <strong>CONFORMIDAD DE RECEPCIÓN:</strong> Por medio de la firma de este conduce, el cliente certifica que recibe los equipos arriba descritos a su entera satisfacción, debidamente reparados, probados y funcionando bajo las condiciones de garantía especificadas.
-                </>
-              )}
+              {policyText}
             </p>
           </div>
         </div>
@@ -183,22 +231,22 @@ export default async function ConducePage({ searchParams }: ConducePageProps) {
         {/* Bloque de Firmas */}
         <div className="grid grid-cols-2 gap-12 mt-12 mb-6 pt-4 text-xs font-mono-terminal uppercase">
           
-          {/* Firma Cliente / Suplidor */}
+          {/* Firma Cliente / Suplidor / Tecnico */}
           <div className="flex flex-col items-center">
             <div className="w-full border-t border-zinc-400 mt-10 mb-2"></div>
-            <span className="font-bold text-zinc-900">{isSupplier ? "Recibido por (Marca / Suplidor)" : "Recibido Conforme (Cliente)"}</span>
+            <span className="font-bold text-zinc-900">{signatureLeft}</span>
           </div>
 
           {/* Firma Entregado */}
           <div className="flex flex-col items-center">
             <div className="w-full border-t border-zinc-400 mt-10 mb-2"></div>
-            <span className="font-bold text-zinc-900">Entregado Por (Taller)</span>
-            <span className="text-[10px] text-zinc-505 mt-1">Firma del Técnico Autorizado</span>
+            <span className="font-bold text-zinc-900">{signatureRight}</span>
+            <span className="text-[10px] text-zinc-500 mt-1">Firma del Técnico Autorizado</span>
           </div>
         </div>
 
-        {/* Acciones de Impresión / Cierre (Componente de Cliente) */}
-        <PrintActions printLabel={isSupplier ? "Imprimir Conduce de Envío" : "Imprimir Conduce"} />
+        {/* Acciones de Impresión / Cierre */}
+        <PrintActions printLabel={isSupplier ? "Imprimir Conduce de Envío" : isTech ? "Imprimir Conduce Asignación" : "Imprimir Conduce"} />
       </main>
     </div>
   );

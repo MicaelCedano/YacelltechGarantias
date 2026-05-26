@@ -276,7 +276,9 @@ export function CaseDrawer({ caseData, isOpen, onClose, onStatusUpdated, onCaseD
                     disabled={isUpdating}
                     className="px-3 py-1.5 text-xs bg-zinc-950 border border-zinc-850 text-zinc-300 font-mono-terminal uppercase rounded-none focus:border-amber-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed pr-7"
                   >
+                    <option value="Recibido">Recibido</option>
                     <option value="En reparación">En reparación</option>
+                    <option value="Recibido del técnico">Recibido del técnico</option>
                     <option value="Enviado al suplidor">Enviado al suplidor</option>
                     <option value="Recibido del suplidor">Recibido del suplidor</option>
                     <option value="Entregado">Entregado</option>

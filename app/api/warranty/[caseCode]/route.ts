@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { isMockMode, supabase } from "@/lib/supabase";
 import { updateMockCaseFields, deleteMockCase } from "@/lib/mockDb";
 
-const VALID_STATUSES = ["En reparación", "Enviado al suplidor", "Recibido del suplidor", "Entregado"];
+const VALID_STATUSES = [
+  "Recibido",
+  "En reparación",
+  "Recibido del técnico",
+  "Enviado al suplidor",
+  "Recibido del suplidor",
+  "Entregado"
+];
 
 export async function PATCH(
   request: NextRequest,

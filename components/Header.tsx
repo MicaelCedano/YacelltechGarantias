@@ -93,6 +93,24 @@ export function Header() {
                 <span>Despacho</span>
               </button>
             )}
+            {pathname !== "/dashboard/entrega-tecnico" && (
+              <button
+                onClick={() => router.push("/dashboard/entrega-tecnico")}
+                className="inline-flex items-center gap-2 px-3 py-2 border border-zinc-850 bg-zinc-950 hover:bg-zinc-900 text-zinc-400 hover:text-amber-500 font-mono-terminal text-xs uppercase tracking-wider transition-all cursor-pointer rounded-none"
+              >
+                <ClipboardList className="w-4 h-4 text-amber-500" />
+                <span>Entrega Técnico</span>
+              </button>
+            )}
+            {pathname !== "/dashboard/recepcion-tecnico" && (
+              <button
+                onClick={() => router.push("/dashboard/recepcion-tecnico")}
+                className="inline-flex items-center gap-2 px-3 py-2 border border-zinc-850 bg-zinc-950 hover:bg-zinc-900 text-zinc-400 hover:text-emerald-500 font-mono-terminal text-xs uppercase tracking-wider transition-all cursor-pointer rounded-none"
+              >
+                <CheckSquare className="w-4 h-4 text-emerald-500" />
+                <span>Recibo Técnico</span>
+              </button>
+            )}
             {pathname !== "/dashboard/envio-suplidor" && (
               <button
                 onClick={() => router.push("/dashboard/envio-suplidor")}

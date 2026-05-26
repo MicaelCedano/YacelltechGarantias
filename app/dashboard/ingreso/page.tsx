@@ -32,7 +32,7 @@ export default function IngresoPage() {
   // Common Header State
   const [clientName, setClientName] = useState("");
   const [entryDate, setEntryDate] = useState(getTodayDateString());
-  const [status, setStatus] = useState("En reparación");
+  const [status, setStatus] = useState("Recibido");
 
   // Device Intake State
   const [imei, setImei] = useState("");
@@ -95,7 +95,7 @@ export default function IngresoPage() {
   const handleFullReset = () => {
     setClientName("");
     setEntryDate(getTodayDateString());
-    setStatus("En reparación");
+    setStatus("Recibido");
     setImei("");
     setModel("");
     setProblem("");
@@ -348,6 +348,7 @@ export default function IngresoPage() {
                       onChange={(e) => setStatus(e.target.value)}
                       className="w-full px-3 py-2 text-xs bg-zinc-950 border border-zinc-800 text-white font-mono-terminal uppercase rounded-none cursor-pointer focus:outline-hidden focus:border-amber-500 disabled:opacity-60"
                     >
+                      <option value="Recibido">Recibido</option>
                       <option value="En reparación">En reparación</option>
                       <option value="Entregado">Entregado</option>
                     </select>

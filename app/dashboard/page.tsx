@@ -167,7 +167,9 @@ export default function DashboardPage() {
   // Estadísticas rápidas para la cabecera
   const stats = {
     total: cases.length,
+    recibido: cases.filter((c) => c.status === "Recibido").length,
     reparacion: cases.filter((c) => c.status === "En reparación").length,
+    recibidoTecnico: cases.filter((c) => c.status === "Recibido del técnico").length,
     enSuplidor: cases.filter((c) => c.status === "Enviado al suplidor").length,
     recibidoSuplidor: cases.filter((c) => c.status === "Recibido del suplidor").length,
     entregados: cases.filter((c) => c.status === "Entregado").length,
@@ -180,21 +182,29 @@ export default function DashboardPage() {
       <Header />
 
       {/* Panel de Estadísticas Fijas */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        <div className="p-4 bg-zinc-900 border border-zinc-850 border-l-2 border-l-teal-500">
+          <span className="text-[10px] text-zinc-400 font-mono-terminal uppercase block mb-1">Recibidos (Nuevos)</span>
+          <span className="text-xl font-mono-terminal font-bold text-teal-400">{stats.recibido}</span>
+        </div>
         <div className="p-4 bg-zinc-900 border border-zinc-850 border-l-2 border-l-amber-500">
-          <span className="text-[10px] text-zinc-400 font-mono-terminal uppercase block mb-1">EN TALLER (PTE)</span>
+          <span className="text-[10px] text-zinc-400 font-mono-terminal uppercase block mb-1">En Taller (Téc)</span>
           <span className="text-xl font-mono-terminal font-bold text-amber-500">{stats.reparacion}</span>
         </div>
+        <div className="p-4 bg-zinc-900 border border-zinc-850 border-l-2 border-l-emerald-500">
+          <span className="text-[10px] text-zinc-400 font-mono-terminal uppercase block mb-1">Recibidos de Téc</span>
+          <span className="text-xl font-mono-terminal font-bold text-emerald-400">{stats.recibidoTecnico}</span>
+        </div>
         <div className="p-4 bg-zinc-900 border border-zinc-850 border-l-2 border-l-blue-500">
-          <span className="text-[10px] text-zinc-400 font-mono-terminal uppercase block mb-1">EN MARCA (SUPLIDOR)</span>
+          <span className="text-[10px] text-zinc-400 font-mono-terminal uppercase block mb-1">En Marca (Suplidor)</span>
           <span className="text-xl font-mono-terminal font-bold text-blue-500">{stats.enSuplidor}</span>
         </div>
         <div className="p-4 bg-zinc-900 border border-zinc-850 border-l-2 border-l-purple-500">
-          <span className="text-[10px] text-zinc-400 font-mono-terminal uppercase block mb-1">RECIBIDO DE MARCA</span>
+          <span className="text-[10px] text-zinc-400 font-mono-terminal uppercase block mb-1">Recibidos de Marca</span>
           <span className="text-xl font-mono-terminal font-bold text-purple-500">{stats.recibidoSuplidor}</span>
         </div>
-        <div className="p-4 bg-zinc-900 border border-zinc-850 border-l-2 border-l-zinc-650">
-          <span className="text-[10px] text-zinc-400 font-mono-terminal uppercase block mb-1">ENTREGADOS CLIENTES</span>
+        <div className="p-4 bg-[#161616] border border-zinc-850 border-l-2 border-l-zinc-650">
+          <span className="text-[10px] text-zinc-400 font-mono-terminal uppercase block mb-1">Entregados Clientes</span>
           <span className="text-xl font-mono-terminal font-bold text-zinc-400">{stats.entregados}</span>
         </div>
       </div>

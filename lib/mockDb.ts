@@ -189,6 +189,7 @@ export interface ConduceRecord {
   case_codes: string[];
   created_at: string;
   is_supplier?: boolean;
+  is_tech?: boolean;
 }
 
 const CONDUCES_DB_PATH = path.join(process.cwd(), "conduces_db.json");
@@ -219,7 +220,7 @@ export async function getMockConduces(): Promise<ConduceRecord[]> {
   return readConducesDb();
 }
 
-export async function generateMockConduceCode(deliveryDateStr: string, isSupplier?: boolean): Promise<string> {
+export async function generateMockConduceCode(deliveryDateStr: string, isSupplier?: boolean, isTech?: boolean): Promise<string> {
   const dateParts = deliveryDateStr.split("-"); // YYYY-MM-DD
   if (dateParts.length !== 3) {
     throw new Error("Formato de fecha inválido para código de conduce.");
@@ -227,7 +228,10 @@ export async function generateMockConduceCode(deliveryDateStr: string, isSupplie
   
   const mm = dateParts[1];
   const dd = dateParts[2];
-  const prefix = isSupplier ? `SUPL-${mm}${dd}-` : `COND-${mm}${dd}-`;
+  
+  let prefix = `COND-${mm}${dd}-`;
+  if (isSupplier) prefix = `SUPL-${mm}${dd}-`;
+  else if (isTech) prefix = `TECN-${mm}${dd}-`;
   
   const conduces = readConducesDb();
   
@@ -257,9 +261,10 @@ export async function saveMockConduce(newConduce: {
   delivery_date: string;
   case_codes: string[];
   is_supplier?: boolean;
+  is_tech?: boolean;
 }): Promise<ConduceRecord> {
   const conduces = readConducesDb();
-  const code = await generateMockConduceCode(newConduce.delivery_date, newConduce.is_supplier);
+  const code = await generateMockConduceCode(newConduce.delivery_date, newConduce.is_supplier, newConduce.is_tech);
   const timestamp = new Date().toISOString();
   
   const recordToSave: ConduceRecord = {
