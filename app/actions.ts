@@ -117,11 +117,11 @@ export async function loginUser(email: string, password: string) {
       );
 
       if (foundUser) {
-        // Generar una cookie de sesión simulada
+        // Generar una cookie de sesión simulada (por 1 año para mantenerla abierta)
         cookies().set("yacelltech_token", "mock-session-token", {
           httpOnly: true,
           secure: process.env.NODE_ENV === "production",
-          maxAge: 3600, // 1 hora
+          maxAge: 365 * 24 * 60 * 60, // 1 año
           path: "/",
           sameSite: "lax",
         });
@@ -154,7 +154,7 @@ export async function loginUser(email: string, password: string) {
       cookies().set("yacelltech_token", data.session.access_token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        maxAge: data.session.expires_in,
+        maxAge: 365 * 24 * 60 * 60, // 1 año (para mantener la sesión abierta)
         path: "/",
         sameSite: "lax",
       });
