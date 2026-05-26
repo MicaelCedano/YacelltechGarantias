@@ -143,6 +143,9 @@ export default function IngresoPage() {
   const handleProcessBatch = async () => {
     if (!isBatchReady) return;
 
+    // Abrir una pestaña en blanco de forma síncrona antes del await para evadir el bloqueador de popups del navegador
+    const receiptTab = window.open("about:blank", "_blank");
+
     setIsSubmitting(true);
     const toastId = toast.loading("Ingresando garantías al servidor...");
 
@@ -155,6 +158,7 @@ export default function IngresoPage() {
       });
 
       if (!response.success || !response.case_codes) {
+        if (receiptTab) receiptTab.close();
         throw new Error(response.error || "Error al procesar ingreso.");
       }
 
@@ -168,10 +172,15 @@ export default function IngresoPage() {
       const newModels = devicesList.map((d) => d.model.trim()).filter(Boolean);
       setModelSuggestions((prev) => Array.from(new Set([...prev, ...newModels])));
       
-      // Abrir el conduce de recibo en una pestaña nueva
+      // Redirigir la pestaña previamente abierta al conduce de recibo generado
       const codesParam = response.case_codes.join(",");
-      window.open(`/receipt?cases=${codesParam}`, "_blank");
+      if (receiptTab) {
+        receiptTab.location.href = `/receipt?cases=${codesParam}`;
+      } else {
+        window.open(`/receipt?cases=${codesParam}`, "_blank");
+      }
     } catch (err) {
+      if (receiptTab) receiptTab.close();
       console.error(err);
       toast.error(err instanceof Error ? err.message : "Fallo al conectar con el servidor", { id: toastId });
     } finally {

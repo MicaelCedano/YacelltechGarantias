@@ -143,8 +143,11 @@ export default function DespachoPage() {
   // Confirmar despacho masivo y generar conduce
   const handleConfirmDispatch = async () => {
     if (dispatchList.length === 0) return;
+
+    // Abrir una pestaña en blanco de forma síncrona antes del await para evadir el bloqueador de popups del navegador
+    const conduceTab = window.open("about:blank", "_blank");
+
     setIsSubmitting(true);
-    
     const toastId = toast.loading("Registrando despacho en el sistema...");
 
     try {
@@ -163,6 +166,7 @@ export default function DespachoPage() {
       const allOk = responses.every((res) => res.ok);
 
       if (!allOk) {
+        if (conduceTab) conduceTab.close();
         throw new Error("Uno o más equipos fallaron al actualizar el estado de entrega.");
       }
 
@@ -187,14 +191,19 @@ export default function DespachoPage() {
       // Crear string de códigos separados por coma
       const caseCodes = dispatchList.map((item) => item.case_code).join(",");
       
-      // Abrir conduce en una pestaña nueva
-      window.open(`/conduce?cases=${caseCodes}`, "_blank");
+      // Redirigir la pestaña previamente abierta al conduce de despacho
+      if (conduceTab) {
+        conduceTab.location.href = `/conduce?cases=${caseCodes}`;
+      } else {
+        window.open(`/conduce?cases=${caseCodes}`, "_blank");
+      }
 
       // Limpiar estados y re-cargar registros de la API
       setDispatchList([]);
       setSelectedClient(null);
       fetchActiveCases();
     } catch (err) {
+      if (conduceTab) conduceTab.close();
       console.error(err);
       toast.error(
         err instanceof Error ? err.message : "Error al procesar el despacho",

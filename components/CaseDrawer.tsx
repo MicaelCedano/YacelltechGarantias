@@ -162,6 +162,9 @@ export function CaseDrawer({ caseData, isOpen, onClose, onStatusUpdated, onCaseD
   };
 
   const handleDeliverAndPrint = async () => {
+    // Abrir una pestaña en blanco de forma síncrona antes del await para evadir el bloqueador de popups del navegador
+    const conduceTab = window.open("about:blank", "_blank");
+
     setIsUpdating(true);
     try {
       const response = await fetch(`/api/warranty/${caseData.case_code}`, {
@@ -175,6 +178,7 @@ export function CaseDrawer({ caseData, isOpen, onClose, onStatusUpdated, onCaseD
       const result = await response.ok ? await response.json() : null;
 
       if (!result || !result.success) {
+        if (conduceTab) conduceTab.close();
         throw new Error(result?.error || "Error al actualizar estado");
       }
 
@@ -197,9 +201,14 @@ export function CaseDrawer({ caseData, isOpen, onClose, onStatusUpdated, onCaseD
       toast.success("Equipo entregado. Generando conduce...");
       onStatusUpdated(result.case);
       
-      // Abrir conduce en pestaña nueva
-      window.open(`/conduce?cases=${caseData.case_code}`, "_blank");
+      // Redirigir la pestaña previamente abierta al conduce
+      if (conduceTab) {
+        conduceTab.location.href = `/conduce?cases=${caseData.case_code}`;
+      } else {
+        window.open(`/conduce?cases=${caseData.case_code}`, "_blank");
+      }
     } catch (err) {
+      if (conduceTab) conduceTab.close();
       console.error(err);
       const message = err instanceof Error ? err.message : "Fallo al realizar la entrega";
       toast.error(message);

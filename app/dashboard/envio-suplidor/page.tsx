@@ -147,8 +147,11 @@ export default function EnvioSuplidorPage() {
   const handleConfirmDispatch = async () => {
     if (dispatchList.length === 0) return;
     if (!selectedSupplier.trim()) return;
+
+    // Abrir una pestaña en blanco de forma síncrona antes del await para evadir el bloqueador de popups del navegador
+    const conduceTab = window.open("about:blank", "_blank");
+
     setIsSubmitting(true);
-    
     const toastId = toast.loading("Registrando envío al suplidor...");
 
     try {
@@ -167,6 +170,7 @@ export default function EnvioSuplidorPage() {
       const allOk = responses.every((res) => res.ok);
 
       if (!allOk) {
+        if (conduceTab) conduceTab.close();
         throw new Error("Uno o más equipos fallaron al actualizar el estado del envío.");
       }
 
@@ -192,8 +196,13 @@ export default function EnvioSuplidorPage() {
       // Crear string de códigos separados por coma
       const caseCodes = dispatchList.map((item) => item.case_code).join(",");
       
-      // Abrir conduce de suplidor en pestaña nueva
-      window.open(`/conduce?cases=${caseCodes}&type=suplidor&suplidor=${encodeURIComponent(selectedSupplier)}`, "_blank");
+      // Redirigir la pestaña previamente abierta al conduce de suplidor
+      const targetUrl = `/conduce?cases=${caseCodes}&type=suplidor&suplidor=${encodeURIComponent(selectedSupplier)}`;
+      if (conduceTab) {
+        conduceTab.location.href = targetUrl;
+      } else {
+        window.open(targetUrl, "_blank");
+      }
 
       // Limpiar estados y re-cargar registros de la API
       setDispatchList([]);
@@ -201,6 +210,7 @@ export default function EnvioSuplidorPage() {
       setIsSupplierLocked(false);
       fetchActiveCases();
     } catch (err) {
+      if (conduceTab) conduceTab.close();
       console.error(err);
       toast.error(
         err instanceof Error ? err.message : "Error al procesar el envío",
