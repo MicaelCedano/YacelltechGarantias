@@ -97,7 +97,7 @@ export async function createWarrantyCase(formData: WarrantyIntakeInput) {
 export async function loginUser(email: string, password: string) {
   try {
     if (!email.trim() || !password.trim()) {
-      return { success: false, error: "El correo y la contraseña son obligatorios." };
+      return { success: false, error: "El usuario y la contraseña son obligatorios." };
     }
     // 1. AUTENTICACIÓN EN MODO LOCAL SIMULADO
     if (isMockMode()) {
@@ -129,7 +129,7 @@ export async function loginUser(email: string, password: string) {
       } else {
         return { 
           success: false, 
-          error: "Credenciales de prueba incorrectas. Pruebe con: admin@yacelltech.com / admin o soporte@yacelltech.com / yacelltech123." 
+          error: "Credenciales de prueba incorrectas. Pruebe con: admin o soporte." 
         };
       }
     }
@@ -145,7 +145,7 @@ export async function loginUser(email: string, password: string) {
       console.error("Error en signInWithPassword:", error);
       let userFriendlyError = error.message;
       if (error.message.includes("Invalid login credentials") || error.message.includes("invalid claim")) {
-        userFriendlyError = "Credenciales incorrectas. Verifique su correo y contraseña.";
+        userFriendlyError = "Credenciales incorrectas. Verifique su usuario y contraseña.";
       }
       return { success: false, error: userFriendlyError };
     }

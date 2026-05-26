@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { loginUser } from "../actions";
-import { Terminal, ShieldAlert, Key, Mail } from "lucide-react";
+import { Terminal, ShieldAlert, Key, User } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function LoginPage() {
@@ -16,7 +16,7 @@ export default function LoginPage() {
     e.preventDefault();
 
     if (!email.trim() || !password.trim()) {
-      toast.error("Por favor, ingrese el correo y la contraseña.");
+      toast.error("Por favor, ingrese el usuario y la contraseña.");
       return;
     }
 
@@ -63,16 +63,16 @@ export default function LoginPage() {
 
         <form onSubmit={handleLogin} className="space-y-4">
           
-          {/* Email o Usuario */}
+          {/* Usuario */}
           <div className="flex flex-col">
             <label className="text-xs font-semibold text-zinc-400 font-mono-terminal uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-              <Mail className="w-4 h-4 text-zinc-500" />
-              Email o Usuario
+              <User className="w-4 h-4 text-zinc-500" />
+              Usuario
             </label>
             <input
               type="text"
               required
-              placeholder="ej. admin o admin@yacelltech.com"
+              placeholder="ej. alejandro o admin"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-3 py-2.5 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-none focus:border-amber-500"

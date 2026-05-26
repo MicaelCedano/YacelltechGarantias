@@ -50,12 +50,13 @@ export default function IngresoPage() {
   const imeiInputRef = useRef<HTMLInputElement>(null);
   const modelInputRef = useRef<HTMLInputElement>(null);
 
-  // Autocomplete suggestions for models
+  // Autocomplete suggestions for models and clients
   const [modelSuggestions, setModelSuggestions] = useState<string[]>([]);
+  const [clientSuggestions, setClientSuggestions] = useState<string[]>([]);
 
-  // Cargar modelos existentes para autocompletado
+  // Cargar modelos y clientes existentes para autocompletado
   useEffect(() => {
-    const fetchExistingModels = async () => {
+    const fetchSuggestions = async () => {
       try {
         const response = await fetch("/api/warranty");
         const result = await response.json();
@@ -68,12 +69,21 @@ export default function IngresoPage() {
             )
           );
           setModelSuggestions(uniqueModels);
+
+          const uniqueClients = (Array.from(
+            new Set(
+              result.data
+                .map((item: { client_name?: string }) => item.client_name?.trim())
+                .filter(Boolean)
+            )
+          ) as string[]).sort((a, b) => a.localeCompare(b));
+          setClientSuggestions(uniqueClients);
         }
       } catch (err) {
-        console.error("Error al cargar sugerencias de modelos:", err);
+        console.error("Error al cargar sugerencias de autocompletado:", err);
       }
     };
-    fetchExistingModels();
+    fetchSuggestions();
   }, []);
 
   // Validations
@@ -151,7 +161,10 @@ export default function IngresoPage() {
       toast.success("¡Ingreso registrado exitosamente!", { id: toastId, duration: 4000 });
       setCreatedCodes(response.case_codes);
 
-      // Guardar nuevos modelos registrados en el autocompletado local
+      // Guardar nuevo cliente y nuevos modelos registrados en el autocompletado local
+      if (clientName.trim()) {
+        setClientSuggestions((prev) => Array.from(new Set([...prev, clientName.trim()])).sort((a, b) => a.localeCompare(b)));
+      }
       const newModels = devicesList.map((d) => d.model.trim()).filter(Boolean);
       setModelSuggestions((prev) => Array.from(new Set([...prev, ...newModels])));
       
@@ -283,8 +296,14 @@ export default function IngresoPage() {
                     value={clientName}
                     disabled={devicesList.length > 0}
                     onChange={(e) => setClientName(e.target.value)}
+                    list="client-suggestions"
                     className="w-full px-3 py-2 text-xs bg-zinc-950 border border-zinc-800 text-white rounded-none focus:outline-hidden focus:border-amber-500 disabled:opacity-60 disabled:cursor-not-allowed"
                   />
+                  <datalist id="client-suggestions">
+                    {clientSuggestions.map((c) => (
+                      <option key={c} value={c} />
+                    ))}
+                  </datalist>
                   {devicesList.length > 0 && (
                     <span className="text-[9px] text-zinc-500 font-mono-terminal mt-1">
                       Nombre bloqueado (remover todos los equipos agregados para editar).
