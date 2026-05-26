@@ -251,16 +251,15 @@ export default function IngresoPage() {
               </span>
             </div>
             
-            <button
-              onClick={() => {
-                const codesParam = createdCodes.join(",");
-                window.open(`/receipt?cases=${codesParam}`, "_blank");
-              }}
+            <a
+              href={`/receipt?cases=${createdCodes.join(",")}`}
+              target="_blank"
+              rel="noopener noreferrer"
               className="h-10 px-5 inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-black font-mono-terminal text-xs uppercase tracking-wider font-bold transition-all rounded-none cursor-pointer shrink-0"
             >
               <ClipboardList className="w-4 h-4" />
               <span>VER CONDUCE DE RECEPCIÓN</span>
-            </button>
+            </a>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-end border-t border-zinc-900 pt-5">
