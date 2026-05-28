@@ -141,28 +141,37 @@ export default function DashboardPage() {
     setExpandedProblems((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // Filtrado de casos
-  const filteredCases = cases.filter((item) => {
-    // Solo mostrar pendientes (No entregados) en el dashboard
-    if (item.status === "Entregado") return false;
+  // Filtrado y ordenado de casos
+  const filteredCases = cases
+    .filter((item) => {
+      // Solo mostrar pendientes (No entregados) en el dashboard
+      if (item.status === "Entregado") return false;
 
-    // 1. Filtro de búsqueda (IMEI, Modelo, Cliente)
-    const matchesSearch =
-      item.imei.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.client_name.toLowerCase().includes(searchQuery.toLowerCase());
+      // 1. Filtro de búsqueda (IMEI, Modelo, Cliente)
+      const matchesSearch =
+        item.imei.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.model.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.client_name.toLowerCase().includes(searchQuery.toLowerCase());
 
-    // 2. Filtro de rango de fechas
-    let matchesDate = true;
-    if (dateFrom && item.entry_date < dateFrom) {
-      matchesDate = false;
-    }
-    if (dateTo && item.entry_date > dateTo) {
-      matchesDate = false;
-    }
+      // 2. Filtro de rango de fechas
+      let matchesDate = true;
+      if (dateFrom && item.entry_date < dateFrom) {
+        matchesDate = false;
+      }
+      if (dateTo && item.entry_date > dateTo) {
+        matchesDate = false;
+      }
 
-    return matchesSearch && matchesDate;
-  });
+      return matchesSearch && matchesDate;
+    })
+    .sort((a, b) => {
+      // Ordenar primero los que están en estado "Recibido"
+      const aIsRecibido = a.status === "Recibido";
+      const bIsRecibido = b.status === "Recibido";
+      if (aIsRecibido && !bIsRecibido) return -1;
+      if (!aIsRecibido && bIsRecibido) return 1;
+      return 0; // mantener orden cronológico original para el resto
+    });
 
   // Estadísticas rápidas para la cabecera
   const stats = {

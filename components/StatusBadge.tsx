@@ -20,18 +20,18 @@ export function StatusBadge({ status, className = "" }: StatusBadgeProps) {
 
   switch (status) {
     case "Recibido":
-      bgClass = "bg-teal-650";
-      borderClass = "border-teal-700";
+      bgClass = "bg-teal-700";
+      borderClass = "border-teal-600";
       textClass = "text-white font-bold";
       break;
     case "En reparación":
       bgClass = "bg-amber-500";
-      borderClass = "border-amber-650";
+      borderClass = "border-amber-600";
       textClass = "text-black font-bold";
       break;
     case "Recibido del técnico":
-      bgClass = "bg-emerald-650";
-      borderClass = "border-emerald-700";
+      bgClass = "bg-emerald-700";
+      borderClass = "border-emerald-600";
       textClass = "text-white font-bold";
       break;
     case "Enviado al suplidor":
