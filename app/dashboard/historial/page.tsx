@@ -233,92 +233,173 @@ export default function HistorialConducesPage() {
             <span>No se encontraron conduces registrados en el historial.</span>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-[#161616] border-b border-zinc-800 font-mono-terminal uppercase tracking-wider text-zinc-400 select-none">
-                  <th className="p-3.5 font-bold">Código Conduce</th>
-                  <th className="p-3.5 font-bold">Receptor / Cliente</th>
-                  <th className="p-3.5 font-bold">Fecha Despacho</th>
-                  <th className="p-3.5 font-bold text-center">Dispositivos</th>
-                  <th className="p-3.5 font-bold">Equipos Despachados</th>
-                  <th className="p-3.5 font-bold text-center no-print">Acción</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-900">
-                {filteredConduces.map((item) => {
-                  const devices = getConduceDevicesInfo(item.case_codes);
-                  
-                  return (
-                    <tr key={item.id} className="hover:bg-zinc-900/40 transition-colors">
-                      {/* Código Conduce */}
-                      <td className="p-3.5 font-mono-terminal font-bold text-amber-500 tracking-wider">
+          <div className="flex-1 flex flex-col">
+
+            {/* Vista de Escritorio: Tabla */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left border-collapse text-xs">
+                <thead>
+                  <tr className="bg-[#161616] border-b border-zinc-800 font-mono-terminal uppercase tracking-wider text-zinc-400 select-none">
+                    <th className="p-3.5 font-bold">Código Conduce</th>
+                    <th className="p-3.5 font-bold">Receptor / Cliente</th>
+                    <th className="p-3.5 font-bold">Fecha Despacho</th>
+                    <th className="p-3.5 font-bold text-center">Dispositivos</th>
+                    <th className="p-3.5 font-bold">Equipos Despachados</th>
+                    <th className="p-3.5 font-bold text-center no-print">Acción</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-900">
+                  {filteredConduces.map((item) => {
+                    const devices = getConduceDevicesInfo(item.case_codes);
+                    
+                    return (
+                      <tr key={item.id} className="hover:bg-zinc-900/40 transition-colors">
+                        {/* Código Conduce */}
+                        <td className="p-3.5 font-mono-terminal font-bold text-amber-500 tracking-wider">
+                          {item.id}
+                        </td>
+
+                        {/* Cliente / Suplidor */}
+                        <td className="p-3.5 font-medium text-white border-none">
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <User className="w-3.5 h-3.5 text-zinc-500" />
+                            <span>{item.client_name}</span>
+                            {item.id.startsWith("SUPL-") && (
+                              <span className="ml-2 px-1.5 py-0.5 bg-blue-950 border border-blue-800 text-blue-400 text-[8px] font-mono-terminal uppercase font-bold tracking-wider rounded-none">
+                                MARCA / SUPLIDOR
+                              </span>
+                            )}
+                            {item.id.startsWith("TECN-") && (
+                              <span className="ml-2 px-1.5 py-0.5 bg-amber-950 border border-amber-800 text-amber-500 text-[8px] font-mono-terminal uppercase font-bold tracking-wider rounded-none">
+                                TÉCNICO INTERNO
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Fecha de Despacho */}
+                        <td className="p-3.5 font-mono-terminal text-zinc-400">
+                          {item.delivery_date}
+                        </td>
+
+                        {/* Cantidad de Equipos */}
+                        <td className="p-3.5 text-center font-bold text-zinc-300">
+                          <span className="px-2 py-0.5 bg-zinc-950 border border-zinc-850 rounded-none text-[10px]">
+                            {item.case_codes.length} {item.case_codes.length === 1 ? "equipo" : "equipos"}
+                          </span>
+                        </td>
+
+                        {/* Detalle breve de Equipos */}
+                        <td className="p-3.5 text-zinc-400 font-mono-terminal">
+                          <div className="flex flex-col gap-1.5 max-w-sm">
+                            {devices.map((device, idx) => (
+                              <div key={idx} className="flex items-center gap-1 text-[11px] truncate" title={`IMEI: ${device.imei}`}>
+                                <Smartphone className="w-3 h-3 text-zinc-650 shrink-0" />
+                                <span className="text-zinc-300 font-bold">{device.model}</span>
+                                <span className="text-zinc-600">({device.code})</span>
+                              </div>
+                            ))}
+                          </div>
+                        </td>
+
+                        {/* Acción de Reimpresión */}
+                        <td className="p-3.5 text-center no-print">
+                          <a
+                            href={getReprintUrl(item)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-3 py-1.5 border border-zinc-800 hover:border-amber-500 bg-zinc-950 hover:bg-amber-500 text-zinc-400 hover:text-black transition-all inline-flex items-center gap-1.5 cursor-pointer font-mono-terminal text-[10px] tracking-wider rounded-none font-bold no-underline"
+                            title="Reimprimir Conduce de Entrega"
+                          >
+                            <Printer className="w-3.5 h-3.5" />
+                            <span>Reimprimir</span>
+                          </a>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Vista de Móvil: Lista de Tarjetas */}
+            <div className="md:hidden block divide-y divide-zinc-900 bg-zinc-950/20">
+              {filteredConduces.map((item) => {
+                const devices = getConduceDevicesInfo(item.case_codes);
+
+                return (
+                  <div
+                    key={item.id}
+                    className="p-4 hover:bg-zinc-900/60 transition-colors border-b border-zinc-900 space-y-3"
+                  >
+                    {/* Fila 1: Código Conduce y Fecha */}
+                    <div className="flex justify-between items-center">
+                      <span className="font-mono-terminal text-amber-500 font-bold tracking-wider text-sm">
                         {item.id}
-                      </td>
-
-                      {/* Cliente / Suplidor */}
-                      <td className="p-3.5 font-medium text-white border-none">
-                        <div className="flex items-center gap-1.5 mt-1">
-                          <User className="w-3.5 h-3.5 text-zinc-500" />
-                          <span>{item.client_name}</span>
-                          {item.id.startsWith("SUPL-") && (
-                            <span className="ml-2 px-1.5 py-0.5 bg-blue-950 border border-blue-800 text-blue-400 text-[8px] font-mono-terminal uppercase font-bold tracking-wider rounded-none">
-                              MARCA / SUPLIDOR
-                            </span>
-                          )}
-                          {item.id.startsWith("TECN-") && (
-                            <span className="ml-2 px-1.5 py-0.5 bg-amber-950 border border-amber-800 text-amber-500 text-[8px] font-mono-terminal uppercase font-bold tracking-wider rounded-none">
-                              TÉCNICO INTERNO
-                            </span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Fecha de Despacho */}
-                      <td className="p-3.5 font-mono-terminal text-zinc-400">
+                      </span>
+                      <span className="text-[10px] font-mono-terminal text-zinc-500">
                         {item.delivery_date}
-                      </td>
+                      </span>
+                    </div>
 
-                      {/* Cantidad de Equipos */}
-                      <td className="p-3.5 text-center font-bold text-zinc-300">
-                        <span className="px-2 py-0.5 bg-zinc-950 border border-zinc-850 rounded-none text-[10px]">
-                          {item.case_codes.length} {item.case_codes.length === 1 ? "equipo" : "equipos"}
+                    {/* Fila 2: Receptor / Cliente / Tags */}
+                    <div className="space-y-1">
+                      <span className="text-[9px] text-zinc-650 font-mono-terminal uppercase block">Receptor / Destinatario</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <User className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                        <span className="font-bold text-white text-sm">{item.client_name}</span>
+                        {item.id.startsWith("SUPL-") && (
+                          <span className="px-1.5 py-0.5 bg-blue-950 border border-blue-800 text-blue-400 text-[8px] font-mono-terminal uppercase font-bold tracking-wider rounded-none shrink-0">
+                            MARCA
+                          </span>
+                        )}
+                        {item.id.startsWith("TECN-") && (
+                          <span className="px-1.5 py-0.5 bg-amber-950 border border-amber-800 text-amber-500 text-[8px] font-mono-terminal uppercase font-bold tracking-wider rounded-none shrink-0">
+                            TÉCNICO
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Fila 3: Cantidad y Equipos */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-[11px] text-zinc-400">
+                        <span className="text-[9px] text-zinc-650 font-mono-terminal uppercase block">Equipos Despachados</span>
+                        <span className="px-1.5 py-0.5 bg-zinc-900 border border-zinc-850 rounded-none text-[10px] font-bold text-zinc-300">
+                          {item.case_codes.length} {item.case_codes.length === 1 ? "unidad" : "unidades"}
                         </span>
-                      </td>
+                      </div>
+                      
+                      <div className="p-2.5 bg-zinc-950 border border-zinc-900/60 font-mono-terminal text-[11px] space-y-1.5 max-h-32 overflow-y-auto">
+                        {devices.map((device, idx) => (
+                          <div key={idx} className="flex items-center gap-1.5 text-zinc-350 truncate">
+                            <Smartphone className="w-3 h-3 text-zinc-600 shrink-0" />
+                            <span className="text-zinc-200 font-semibold">{device.model}</span>
+                            <span className="text-zinc-500">({device.code})</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
 
-                      {/* Detalle breve de Equipos */}
-                      <td className="p-3.5 text-zinc-400 font-mono-terminal">
-                        <div className="flex flex-col gap-1.5 max-w-sm">
-                          {devices.map((device, idx) => (
-                            <div key={idx} className="flex items-center gap-1 text-[11px] truncate" title={`IMEI: ${device.imei}`}>
-                              <Smartphone className="w-3 h-3 text-zinc-650 shrink-0" />
-                              <span className="text-zinc-300 font-bold">{device.model}</span>
-                              <span className="text-zinc-600">({device.code})</span>
-                            </div>
-                          ))}
-                        </div>
-                      </td>
-
-                      {/* Acción de Reimpresión */}
-                      <td className="p-3.5 text-center no-print">
-                        <a
-                          href={getReprintUrl(item)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-3 py-1.5 border border-zinc-800 hover:border-amber-500 bg-zinc-950 hover:bg-amber-500 text-zinc-400 hover:text-black transition-all inline-flex items-center gap-1.5 cursor-pointer font-mono-terminal text-[10px] tracking-wider rounded-none font-bold no-underline"
-                          title="Reimprimir Conduce de Entrega"
-                        >
-                          <Printer className="w-3.5 h-3.5" />
-                          <span>Reimprimir</span>
-                        </a>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                    {/* Fila 4: Reimprimir */}
+                    <div className="pt-2 border-t border-zinc-900/40">
+                      <a
+                        href={getReprintUrl(item)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-2 border border-zinc-800 hover:border-amber-500 bg-zinc-950 hover:bg-amber-500 text-zinc-400 hover:text-black transition-all inline-flex items-center justify-center gap-2 cursor-pointer font-mono-terminal text-[10px] tracking-wider rounded-none font-bold no-underline"
+                      >
+                        <Printer className="w-3.5 h-3.5" />
+                        <span>Reimprimir Conduce de Entrega</span>
+                      </a>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
+
       </div>
     </div>
   );
