@@ -79,6 +79,9 @@ export default function DashboardPage() {
     
     if (!confirmDeliver) return;
 
+    // Abrir una pestaÃ±a en blanco de forma sÃ­ncrona antes del await para evadir el bloqueador de popups del navegador
+    const conduceTab = window.open("about:blank", "_blank");
+
     try {
       const response = await fetch(`/api/warranty/${item.case_code}`, {
         method: "PATCH",
@@ -91,6 +94,7 @@ export default function DashboardPage() {
       const result = await response.ok ? await response.json() : null;
 
       if (!result || !result.success) {
+        if (conduceTab) conduceTab.close();
         throw new Error(result?.error || "Error al actualizar estado.");
       }
 
@@ -122,8 +126,13 @@ export default function DashboardPage() {
       }
 
       // Abrir conduce de entrega en una pestaña nueva
-      window.open(`/conduce?cases=${item.case_code}`, "_blank");
+      if (conduceTab) {
+        conduceTab.location.href = `/conduce?cases=${item.case_code}`;
+      } else {
+        window.open(`/conduce?cases=${item.case_code}`, "_blank");
+      }
     } catch (err) {
+      if (conduceTab) conduceTab.close();
       console.error(err);
       toast.error(err instanceof Error ? err.message : "Fallo al procesar la entrega.");
     }

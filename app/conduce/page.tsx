@@ -163,9 +163,6 @@ export default async function ConducePage({ searchParams }: ConducePageProps) {
             <span className="text-xs font-bold bg-black text-white px-3 py-1 font-mono-terminal tracking-wider inline-block uppercase select-none print:border print:border-black">
               {docTitle}
             </span>
-            <span className="text-[10px] font-mono-terminal text-zinc-700 font-semibold mt-1">
-              RNC: 132-45678-9 (Temp)
-            </span>
           </div>
         </div>
 
