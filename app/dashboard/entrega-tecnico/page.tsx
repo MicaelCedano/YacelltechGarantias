@@ -38,7 +38,7 @@ export default function EntregaTecnicoPage() {
   const fetchActiveCases = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/warranty");
+      const response = await fetch(`/api/warranty?t=${Date.now()}`);
       const result = await response.json();
       if (response.ok && result.success) {
         // Nos interesan los casos con estado "Recibido"
@@ -152,9 +152,6 @@ export default function EntregaTecnicoPage() {
     if (dispatchList.length === 0) return;
     if (!selectedTech.trim()) return;
 
-    // Abrir una pestaña en blanco de forma síncrona antes del await para evadir el bloqueador de popups del navegador
-    const conduceTab = typeof window !== "undefined" ? window.open("about:blank", "_blank") : null;
-
     setIsSubmitting(true);
     const toastId = toast.loading("Asignando equipos al técnico...");
 
@@ -174,47 +171,37 @@ export default function EntregaTecnicoPage() {
       const allOk = responses.every((res) => res.ok);
 
       if (!allOk) {
-        if (conduceTab) conduceTab.close();
         throw new Error("Uno o más equipos fallaron al actualizar el estado a En reparación.");
+      }
+
+      // Registrar el conduce en el historial
+      const techNameSaved = selectedTech;
+      const caseCodesArray = dispatchList.map((item) => item.case_code);
+      
+      const condRes = await fetch("/api/conduces", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          client_name: techNameSaved,
+          case_codes: caseCodesArray,
+          is_tech: true,
+        }),
+      });
+      
+      const condResult = condRes.ok ? await condRes.json() : null;
+      if (!condResult || !condResult.success) {
+        throw new Error(
+          condResult?.error || "Equipos asignados, pero falló el registro del conduce técnico en el historial."
+        );
       }
 
       toast.success("¡Equipos entregados al técnico con éxito!", { id: toastId });
       
-      // Registrar el conduce en el historial
-      let newConduceId = "";
-      const caseCodesArray = dispatchList.map((item) => item.case_code);
-      const techNameSaved = selectedTech;
-      
-      try {
-        const condRes = await fetch("/api/conduces", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            client_name: techNameSaved,
-            case_codes: caseCodesArray,
-            is_tech: true,
-          }),
-        });
-        const condResult = await condRes.json();
-        if (condRes.ok && condResult.success) {
-          newConduceId = condResult.data.id;
-        }
-      } catch (logErr) {
-        console.error("No se pudo registrar el conduce en el historial:", logErr);
-      }
-      
-      // Redirigir la pestaña previamente abierta al conduce de tipo técnico
-      const caseCodes = caseCodesArray.join(",");
-      const targetUrl = `/conduce?cases=${caseCodes}&type=tecnico&tecnico=${encodeURIComponent(techNameSaved)}`;
-      if (conduceTab) {
-        conduceTab.location.href = targetUrl;
-      }
-
       // Guardar información del conduce creado para la pantalla de éxito
       setCreatedConduce({
-        id: newConduceId || "TECN-Generado",
+        id: condResult.data?.id || "TECN-Generado",
         techName: techNameSaved,
         caseCodes: caseCodesArray,
       });
@@ -225,7 +212,6 @@ export default function EntregaTecnicoPage() {
       setIsTechLocked(false);
       fetchActiveCases();
     } catch (err) {
-      if (conduceTab) conduceTab.close();
       console.error(err);
       toast.error(
         err instanceof Error ? err.message : "Error al procesar el envío al técnico",

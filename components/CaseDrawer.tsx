@@ -50,14 +50,54 @@ export function CaseDrawer({ caseData, isOpen, onClose, onStatusUpdated, onCaseD
     setIsEditing(false);
   }, [caseData]);
 
-  if (!isOpen || !caseData) return null;
-
-  const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+  if (!isOpen || !caseData) return null;  const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newStatus = e.target.value;
+
+    // Determinar si se requiere registrar un Conduce y capturar la información necesaria
+    let clientNameForConduce = caseData.client_name;
+    let isTech = false;
+    let isSupplier = false;
+    let shouldCreateConduce = false;
+
+    if (newStatus === "Entregado") {
+      const confirmText = `¿Desea registrar un Conduce de Entrega para el cliente "${caseData.client_name}"?`;
+      if (!window.confirm(confirmText)) {
+        // Revertir select en UI
+        e.target.value = caseData.status;
+        return;
+      }
+      shouldCreateConduce = true;
+    } else if (newStatus === "En reparación") {
+      const techName = window.prompt(
+        "Ingrese el nombre del Técnico para registrar el Conduce de Asignación:",
+        "Técnico de Taller"
+      );
+      if (techName === null) {
+        e.target.value = caseData.status;
+        return; // Cancelado
+      }
+      clientNameForConduce = techName.trim() || "Técnico de Taller";
+      isTech = true;
+      shouldCreateConduce = true;
+    } else if (newStatus === "Enviado al suplidor") {
+      const supplierName = window.prompt(
+        "Ingrese el nombre de la Marca/Suplidor para el Conduce de Envío:",
+        caseData.model.split(" ")[0] || "Suplidor"
+      );
+      if (supplierName === null) {
+        e.target.value = caseData.status;
+        return; // Cancelado
+      }
+      clientNameForConduce = supplierName.trim() || "Suplidor";
+      isSupplier = true;
+      shouldCreateConduce = true;
+    }
+
     setSelectedStatus(newStatus);
     setIsUpdating(true);
 
     try {
+      // 1. Actualizar el estado de la garantía
       const response = await fetch(`/api/warranty/${caseData.case_code}`, {
         method: "PATCH",
         headers: {
@@ -66,24 +106,52 @@ export function CaseDrawer({ caseData, isOpen, onClose, onStatusUpdated, onCaseD
         body: JSON.stringify({ status: newStatus }),
       });
 
-      const result = await response.ok ? await response.json() : null;
+      const result = response.ok ? await response.json() : null;
 
       if (!result || !result.success) {
         throw new Error(result?.error || "Error al actualizar estado");
       }
 
-      toast.success(`Estado actualizado a: ${newStatus}`);
+      // 2. Si corresponde, registrar el conduce correspondiente en el historial
+      if (shouldCreateConduce) {
+        const condResponse = await fetch("/api/conduces", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            client_name: clientNameForConduce,
+            case_codes: [caseData.case_code],
+            is_tech: isTech,
+            is_supplier: isSupplier,
+          }),
+        });
+
+        const condResult = condResponse.ok ? await condResponse.json() : null;
+        if (!condResult || !condResult.success) {
+          throw new Error(
+            condResult?.error || "El estado se actualizó, pero falló el registro de conduce en el historial."
+          );
+        }
+        
+        toast.success(`Estado actualizado y Conduce (${condResult.data.id}) registrado en el historial.`);
+      } else {
+        toast.success(`Estado actualizado a: ${newStatus}`);
+      }
+
       onStatusUpdated(result.case);
     } catch (err) {
       console.error(err);
-      const message = err instanceof Error ? err.message : "Fallo al conectar con el servidor para actualizar el estado";
+      const message = err instanceof Error ? err.message : "Fallo al realizar la actualización";
       toast.error(message);
       setSelectedStatus(caseData.status); // restaurar anterior
+      if (e.target) {
+        e.target.value = caseData.status;
+      }
     } finally {
       setIsUpdating(false);
     }
   };
-
   const handleSaveChanges = async () => {
     if (!editClientName.trim()) {
       toast.error("El nombre del cliente no puede estar vacío.");
@@ -160,11 +228,7 @@ export function CaseDrawer({ caseData, isOpen, onClose, onStatusUpdated, onCaseD
       setIsUpdating(false);
     }
   };
-
   const handleDeliverAndPrint = async () => {
-    // Abrir una pestaña en blanco de forma síncrona antes del await para evadir el bloqueador de popups del navegador
-    const conduceTab = window.open("about:blank", "_blank");
-
     setIsUpdating(true);
     try {
       const response = await fetch(`/api/warranty/${caseData.case_code}`, {
@@ -175,40 +239,49 @@ export function CaseDrawer({ caseData, isOpen, onClose, onStatusUpdated, onCaseD
         body: JSON.stringify({ status: "Entregado" }),
       });
 
-      const result = await response.ok ? await response.json() : null;
+      const result = response.ok ? await response.json() : null;
 
       if (!result || !result.success) {
-        if (conduceTab) conduceTab.close();
         throw new Error(result?.error || "Error al actualizar estado");
       }
 
       // Registrar el conduce en el historial
-      try {
-        await fetch("/api/conduces", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            client_name: caseData.client_name,
-            case_codes: [caseData.case_code],
-          }),
-        });
-      } catch (logErr) {
-        console.error("No se pudo registrar el conduce en el historial:", logErr);
+      const condResponse = await fetch("/api/conduces", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          client_name: caseData.client_name,
+          case_codes: [caseData.case_code],
+        }),
+      });
+
+      const condResult = condResponse.ok ? await condResponse.json() : null;
+      if (!condResult || !condResult.success) {
+        throw new Error(
+          condResult?.error || "Equipo marcado como Entregado, pero falló el registro en el historial de conduces."
+        );
       }
 
-      toast.success("Equipo entregado. Generando conduce...");
+      // Mostrar toast con enlace
+      toast.success((t) => (
+        <span className="flex flex-col gap-1 text-[11px] font-mono-terminal">
+          <span>¡Equipo entregado con éxito!</span>
+          <a
+            href={`/conduce?cases=${caseData.case_code}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline font-bold text-emerald-500 hover:text-emerald-400"
+            onClick={() => toast.dismiss(t.id)}
+          >
+            IMPRIMIR CONDUCE
+          </a>
+        </span>
+      ), { duration: 6000 });
+
       onStatusUpdated(result.case);
-      
-      // Redirigir la pestaña previamente abierta al conduce
-      if (conduceTab) {
-        conduceTab.location.href = `/conduce?cases=${caseData.case_code}`;
-      } else {
-        window.open(`/conduce?cases=${caseData.case_code}`, "_blank");
-      }
     } catch (err) {
-      if (conduceTab) conduceTab.close();
       console.error(err);
       const message = err instanceof Error ? err.message : "Fallo al realizar la entrega";
       toast.error(message);
@@ -216,7 +289,6 @@ export function CaseDrawer({ caseData, isOpen, onClose, onStatusUpdated, onCaseD
       setIsUpdating(false);
     }
   };
-
   return (
     <>
       {/* Backdrop de desenfoque oscuro */}

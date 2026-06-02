@@ -32,10 +32,11 @@ export default function HistorialConducesPage() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      // Cargar conduces e información de garantías en paralelo
+      // Cargar conduces e información de garantías en paralelo (desactivando caché del navegador)
+      const timestamp = Date.now();
       const [conducesRes, casesRes] = await Promise.all([
-        fetch("/api/conduces"),
-        fetch("/api/warranty")
+        fetch(`/api/conduces?t=${timestamp}`),
+        fetch(`/api/warranty?t=${timestamp}`)
       ]);
 
       const conducesResult = await conducesRes.json();

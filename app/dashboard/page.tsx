@@ -30,7 +30,7 @@ export default function DashboardPage() {
   const fetchCases = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/warranty");
+      const response = await fetch(`/api/warranty?t=${Date.now()}`);
       const result = await response.json();
 
       if (!response.ok || !result.success) {
@@ -79,9 +79,6 @@ export default function DashboardPage() {
     
     if (!confirmDeliver) return;
 
-    // Abrir una pestaÃ±a en blanco de forma sÃ­ncrona antes del await para evadir el bloqueador de popups del navegador
-    const conduceTab = window.open("about:blank", "_blank");
-
     try {
       const response = await fetch(`/api/warranty/${item.case_code}`, {
         method: "PATCH",
@@ -91,30 +88,46 @@ export default function DashboardPage() {
         body: JSON.stringify({ status: "Entregado" }),
       });
 
-      const result = await response.ok ? await response.json() : null;
+      const result = response.ok ? await response.json() : null;
 
       if (!result || !result.success) {
-        if (conduceTab) conduceTab.close();
         throw new Error(result?.error || "Error al actualizar estado.");
       }
 
       // Registrar el conduce en el historial
-      try {
-        await fetch("/api/conduces", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            client_name: item.client_name,
-            case_codes: [item.case_code],
-          }),
-        });
-      } catch (logErr) {
-        console.error("No se pudo registrar el conduce en el historial:", logErr);
+      const condResponse = await fetch("/api/conduces", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          client_name: item.client_name,
+          case_codes: [item.case_code],
+        }),
+      });
+
+      const condResult = condResponse.ok ? await condResponse.json() : null;
+      if (!condResult || !condResult.success) {
+        throw new Error(
+          condResult?.error || "Equipo marcado como entregado, pero falló el registro en el historial de conduces."
+        );
       }
 
-      toast.success("Equipo entregado. Generando Conduce de Entrega...");
+      // Mostrar toast con enlace interactivo de impresión (evita el popup blocker)
+      toast.success((t) => (
+        <span className="flex flex-col gap-1 text-[11px] font-mono-terminal">
+          <span>¡Equipo entregado con éxito!</span>
+          <a
+            href={`/conduce?cases=${item.case_code}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline font-bold text-emerald-500 hover:text-emerald-400"
+            onClick={() => toast.dismiss(t.id)}
+          >
+            IMPRIMIR CONDUCE
+          </a>
+        </span>
+      ), { duration: 6000 });
       
       // Actualizar en el estado local de dashboard
       setCases((prev) =>
@@ -124,15 +137,7 @@ export default function DashboardPage() {
       if (selectedCase && selectedCase.id === item.id) {
         setSelectedCase(result.case);
       }
-
-      // Abrir conduce de entrega en una pestaña nueva
-      if (conduceTab) {
-        conduceTab.location.href = `/conduce?cases=${item.case_code}`;
-      } else {
-        window.open(`/conduce?cases=${item.case_code}`, "_blank");
-      }
     } catch (err) {
-      if (conduceTab) conduceTab.close();
       console.error(err);
       toast.error(err instanceof Error ? err.message : "Fallo al procesar la entrega.");
     }
