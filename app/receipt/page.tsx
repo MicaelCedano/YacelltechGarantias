@@ -165,9 +165,9 @@ export default async function ReceiptPage({ searchParams }: ReceiptPageProps) {
         </div>
 
         {/* Políticas de garantía */}
-        <div className="mb-10 p-4 border border-zinc-300 bg-zinc-50 text-sm leading-relaxed text-zinc-800">
-          <h4 className="font-bold text-zinc-900 mb-1.5 uppercase font-mono-terminal text-base">Políticas de Garantía y Recepción</h4>
-          <ul className="list-disc list-inside space-y-1 lowercase text-sm leading-relaxed">
+        <div className="mb-10 p-4 border border-zinc-300 bg-zinc-50 text-[11px] leading-relaxed text-zinc-800">
+          <h4 className="font-bold text-zinc-900 mb-1.5 uppercase font-mono-terminal">Políticas de Garantía y Recepción</h4>
+          <ul className="list-disc list-inside space-y-1 lowercase text-[10px] leading-relaxed">
             <li>El dispositivo debe ser presentado con este conduce de recepción.</li>
             <li>La garantía cubre únicamente fallos de fábrica descritos arriba.</li>
             <li>Excluye daños por humedad, golpes o intervención de terceros.</li>
