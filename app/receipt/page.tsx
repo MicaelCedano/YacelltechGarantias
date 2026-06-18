@@ -155,9 +155,9 @@ export default async function ReceiptPage({ searchParams }: ReceiptPageProps) {
             <tbody className="divide-y divide-zinc-300">
               {items.map((item) => (
                 <tr key={item.id} className="text-zinc-900 hover:bg-zinc-55/10">
-                  <td className="p-1.5 border-r border-zinc-300 font-semibold">{item.model}</td>
-                  <td className="p-1.5 border-r border-zinc-300 font-mono-terminal tracking-wider">{item.imei}</td>
-                  <td className="p-1.5 font-mono-terminal italic bg-zinc-50/50 text-[10px] leading-snug">{item.problem}</td>
+                  <td className="p-2 border-r border-zinc-300 font-semibold">{item.model}</td>
+                  <td className="p-2 border-r border-zinc-300 font-mono-terminal tracking-wider">{item.imei}</td>
+                  <td className="p-2 font-mono-terminal italic bg-zinc-50/50 text-[11px] leading-tight">{item.problem}</td>
                 </tr>
               ))}
             </tbody>
