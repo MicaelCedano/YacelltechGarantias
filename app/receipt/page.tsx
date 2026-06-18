@@ -140,7 +140,7 @@ export default async function ReceiptPage({ searchParams }: ReceiptPageProps) {
 
         {/* Detalle de los Equipos Recibidos */}
         <div className="mb-8">
-          <h3 className="text-base font-mono-terminal font-bold uppercase tracking-wider text-zinc-800 border-b border-zinc-400 pb-1 mb-3">
+          <h3 className="text-xs font-mono-terminal font-bold uppercase tracking-wider text-zinc-800 border-b border-zinc-400 pb-1 mb-3">
             Equipos Ingresados a Garantía ({items.length})
           </h3>
           
