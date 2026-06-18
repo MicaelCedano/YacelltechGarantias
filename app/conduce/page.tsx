@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { User, Calendar, ShieldCheck, ArrowLeft, Layers } from "lucide-react";
 import Link from "next/link";
 import { PrintActions } from "@/components/PrintActions";
+import { formatDateSDLong } from "@/lib/tz-utils";
 
 interface ConducePageProps {
   searchParams: {
@@ -56,15 +57,9 @@ export default async function ConducePage({ searchParams }: ConducePageProps) {
   const isTech = searchParams.type === "tecnico";
   const targetName = searchParams.suplidor || searchParams.tecnico || clientName;
 
-  // Fecha de entrega local formateada (Hoy)
+  // Fecha de entrega en zona horaria de Santo Domingo (formato largo)
   const getTodayFormatted = () => {
-    const today = new Date();
-    const options: Intl.DateTimeFormatOptions = {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    };
-    return today.toLocaleDateString("es-ES", options);
+    return formatDateSDLong(new Date());
   };
 
   // Títulos dinámicos de sección

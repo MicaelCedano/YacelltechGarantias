@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isMockMode, supabase } from "@/lib/supabase";
 import { getMockConduces, saveMockConduce } from "@/lib/mockDb";
+import { getTodayDateStr } from "@/lib/tz-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const todayStr = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
+    const todayStr = getTodayDateStr(); // YYYY-MM-DD en hora dominicana
 
     // 1. Modo Local
     if (isMockMode()) {

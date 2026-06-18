@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { createWarrantyCases } from "@/app/actions";
+import { getTodayDateStr } from "@/lib/tz-utils";
 
 interface TempDevice {
   imei: string;
@@ -20,13 +21,11 @@ interface TempDevice {
 export default function IngresoPage() {
   const router = useRouter();
 
-  // Obtener fecha de hoy en zona horaria local YYYY-MM-DD
+  // Obtener fecha de hoy en zona horaria de Santo Domingo YYYY-MM-DD
+  // (no usamos new Date() directamente porque en Vercel el server es UTC
+  // y a partir de las 8pm local salta al día siguiente)
   const getTodayDateString = () => {
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = String(today.getMonth() + 1).padStart(2, "0");
-    const day = String(today.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
+    return getTodayDateStr();
   };
 
   // Common Header State

@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { nowSDISO } from "./tz-utils";
 
 export interface WarrantyCase {
   id: string;
@@ -69,8 +70,8 @@ export async function saveMockCase(newCase: {
   case_code: string;
 }): Promise<WarrantyCase> {
   const cases = readDb();
-  const timestamp = new Date().toISOString();
-  
+  const timestamp = nowSDISO();
+
   const caseToSave: WarrantyCase = {
     id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 11),
     ...newCase,
@@ -96,7 +97,7 @@ export async function updateMockCaseStatus(caseCode: string, status: string): Pr
   cases[idx] = {
     ...cases[idx],
     status,
-    updated_at: new Date().toISOString(),
+    updated_at: nowSDISO(),
   };
   
   writeDb(cases);
@@ -124,9 +125,9 @@ export async function updateMockCaseFields(
   cases[idx] = {
     ...cases[idx],
     ...fields,
-    updated_at: new Date().toISOString(),
+    updated_at: nowSDISO(),
   };
-  
+
   writeDb(cases);
   return cases[idx];
 }
@@ -265,8 +266,8 @@ export async function saveMockConduce(newConduce: {
 }): Promise<ConduceRecord> {
   const conduces = readConducesDb();
   const code = await generateMockConduceCode(newConduce.delivery_date, newConduce.is_supplier, newConduce.is_tech);
-  const timestamp = new Date().toISOString();
-  
+  const timestamp = nowSDISO();
+
   const recordToSave: ConduceRecord = {
     id: code,
     ...newConduce,

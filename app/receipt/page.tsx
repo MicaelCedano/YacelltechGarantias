@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { User, Calendar, ArrowLeft, Layers } from "lucide-react";
 import Link from "next/link";
 import { PrintActions } from "@/components/PrintActions";
+import { formatDateSDLong } from "@/lib/tz-utils";
 
 interface ReceiptPageProps {
   searchParams: {
@@ -48,20 +49,20 @@ export default async function ReceiptPage({ searchParams }: ReceiptPageProps) {
   // Cliente común
   const clientName = items[0].client_name;
 
-  // Fecha de ingreso local formateada
+  // Fecha de ingreso formateada en zona horaria de Santo Domingo
   const getEntryDateFormatted = () => {
     // Tomamos la fecha del primer equipo ingresado
     const entryDateStr = items[0].entry_date;
     try {
       const dateParts = entryDateStr.split("-");
       if (dateParts.length === 3) {
-        const dateObj = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
-        const options: Intl.DateTimeFormatOptions = {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        };
-        return dateObj.toLocaleDateString("es-ES", options);
+        // Construir Date asumiendo UTC y luego formatear en zona SD
+        const dateObj = new Date(Date.UTC(
+          parseInt(dateParts[0]),
+          parseInt(dateParts[1]) - 1,
+          parseInt(dateParts[2])
+        ));
+        return formatDateSDLong(dateObj);
       }
     } catch (e) {
       console.error(e);

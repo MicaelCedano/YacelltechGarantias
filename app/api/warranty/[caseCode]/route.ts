@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isMockMode, supabase } from "@/lib/supabase";
 import { updateMockCaseFields, deleteMockCase } from "@/lib/mockDb";
+import { nowSDISO } from "@/lib/tz-utils";
 
 const VALID_STATUSES = [
   "Recibido",
@@ -75,7 +76,7 @@ export async function PATCH(
       .from("warranty_cases")
       .update({
         ...updateFields,
-        updated_at: new Date().toISOString(),
+        updated_at: nowSDISO(),
       })
       .eq("case_code", caseCode)
       .select();
