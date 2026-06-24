@@ -42,7 +42,7 @@ export default function EnvioSuplidorPage() {
       const response = await fetch(`/api/warranty?t=${Date.now()}`);
       const result = await response.json();
       if (response.ok && result.success) {
-        // Nos interesan los que están en taller (En reparación)
+        // Nos interesan los que están en "Recibido" o "En reparación" (aún no despachados)
         setAllCases(result.data || []);
       } else {
         throw new Error(result?.error || "Error al sincronizar datos.");
@@ -93,15 +93,19 @@ export default function EnvioSuplidorPage() {
       return;
     }
 
-    // Buscar si hay alguno que esté "En reparación" (en el taller)
-    const targetCase = matchingCases.find((c) => c.status === "En reparación");
+    // Aceptar equipos en estado "Recibido" (recepción) o "En reparación" (en taller)
+    const targetCase = matchingCases.find(
+      (c) => c.status === "En reparación" || c.status === "Recibido"
+    );
 
     if (!targetCase) {
       const alreadySent = matchingCases.find((c) => c.status === "Enviado al suplidor");
       if (alreadySent) {
         toast.error(`El equipo con IMEI ${cleanImei} ya fue ENVIADO al suplidor previamente.`);
       } else {
-        toast.error(`El equipo con IMEI ${cleanImei} no está en estado "En reparación" (Estado actual: ${matchingCases[0].status}).`);
+        toast.error(
+          `El equipo con IMEI ${cleanImei} no está en estado válido para envío (actual: ${matchingCases[0].status}). Debe estar "Recibido" o "En reparación".`
+        );
       }
       setImeiInput("");
       inputRef.current?.focus();
@@ -249,7 +253,7 @@ export default function EnvioSuplidorPage() {
               ENVÍO A LA MARCA / SUPLIDOR
             </h1>
             <p className="text-xs text-zinc-500 font-mono-terminal uppercase tracking-widest">
-              Despacho de garantías hacia soporte de la marca y generación de conduce
+              Despacho de garantías hacia soporte de la marca y generación de conduce (acepta equipos en "Recibido" o "En reparación")
             </p>
           </div>
         </div>
@@ -377,7 +381,7 @@ export default function EnvioSuplidorPage() {
             <div className="flex-1 w-full border-t md:border-t-0 md:border-l border-zinc-850 pt-6 md:pt-0 md:pl-6">
               <form onSubmit={handleAddImei} className="space-y-3">
                 <label className="text-[10px] tracking-wider text-zinc-400 font-mono-terminal block uppercase font-bold">
-                  2. Escanear o Escribir IMEI del Equipo (En Taller)
+                  2. Escanear o Escribir IMEI del Equipo (Recepción o Taller)
                 </label>
                 
                 <div className="flex gap-2">
@@ -428,7 +432,7 @@ export default function EnvioSuplidorPage() {
               <div className="flex-1 flex flex-col items-center justify-center p-12 text-zinc-600 font-mono-terminal gap-2 min-h-[250px] text-center select-none">
                 <Smartphone className="w-8 h-8 text-zinc-800" />
                 <p className="text-xs">No hay equipos agregados en la lista de despacho actual.</p>
-                <p className="text-[10px] text-zinc-700">Escriba el suplidor y luego ingrese o escanee un IMEI arriba para iniciar.</p>
+                <p className="text-[10px] text-zinc-700">Escriba el suplidor y luego ingrese o escanee un IMEI arriba para iniciar (equipos en "Recibido" o "En reparación").</p>
               </div>
             ) : (
               <div className="flex-1 flex flex-col">
