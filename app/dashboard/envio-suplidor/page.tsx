@@ -253,7 +253,7 @@ export default function EnvioSuplidorPage() {
               ENVÍO A LA MARCA / SUPLIDOR
             </h1>
             <p className="text-xs text-zinc-500 font-mono-terminal uppercase tracking-widest">
-              Despacho de garantías hacia soporte de la marca y generación de conduce (acepta equipos en "Recibido" o "En reparación")
+              Despacho de garantías hacia soporte de la marca y generación de conduce (acepta equipos en &quot;Recibido&quot; o &quot;En reparación&quot;)
             </p>
           </div>
         </div>
@@ -432,7 +432,7 @@ export default function EnvioSuplidorPage() {
               <div className="flex-1 flex flex-col items-center justify-center p-12 text-zinc-600 font-mono-terminal gap-2 min-h-[250px] text-center select-none">
                 <Smartphone className="w-8 h-8 text-zinc-800" />
                 <p className="text-xs">No hay equipos agregados en la lista de despacho actual.</p>
-                <p className="text-[10px] text-zinc-700">Escriba el suplidor y luego ingrese o escanee un IMEI arriba para iniciar (equipos en "Recibido" o "En reparación").</p>
+                <p className="text-[10px] text-zinc-700">Escriba el suplidor y luego ingrese o escanee un IMEI arriba para iniciar (equipos en &quot;Recibido&quot; o &quot;En reparación&quot;).</p>
               </div>
             ) : (
               <div className="flex-1 flex flex-col">
