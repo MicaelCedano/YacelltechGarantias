@@ -45,3 +45,5 @@ test-supabase.js
 migrate-to-supabase.js
 
 
+
+*.audit-backup

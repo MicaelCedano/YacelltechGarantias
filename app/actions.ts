@@ -102,11 +102,11 @@ export async function loginUser(email: string, password: string) {
     // 1. AUTENTICACIÓN EN MODO LOCAL SIMULADO
     if (isMockMode()) {
       const MOCK_USERS = [
-        { email: "admin@yacelltech.com", password: "admin", name: "Administrador" },
-        { email: "soporte@yacelltech.com", password: "yacelltech123", name: "Soporte Técnico" },
-        { email: "tecnico@yacelltech.com", password: "tecnico123", name: "Técnico Especializado" },
-        { email: "taller@yacelltech.com", password: "taller123", name: "Encargado de Taller" },
-        { email: "alejandro@yacelltech.com", password: "1234", name: "Alejandro" },
+        { email: "admin@yacelltech.com", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Administrador" },
+        { email: "soporte@yacelltech.com", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Soporte Técnico" },
+        { email: "tecnico@yacelltech.com", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Técnico Especializado" },
+        { email: "taller@yacelltech.com", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Encargado de Taller" },
+        { email: "alejandro@yacelltech.com", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Alejandro" },
       ];
 
       const foundUser = MOCK_USERS.find(
