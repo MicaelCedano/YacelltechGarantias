@@ -3,24 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { registerUser } from "@/app/actions";
-import { Terminal, ShieldAlert, KeyRound, User, AtSign, UserPlus, ArrowLeft, Shield, Wrench, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { Terminal, ShieldAlert, KeyRound, User, AtSign, UserPlus, ArrowLeft, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import toast from "react-hot-toast";
-import type { UserRole } from "@/lib/usersDb";
-
-const ROLE_META: Record<UserRole, { label: string; icon: React.ReactNode; description: string; color: string }> = {
-  admin: {
-    label: "Administrador",
-    icon: <Shield className="w-3.5 h-3.5" />,
-    description: "Control total del sistema",
-    color: "border-red-500/30 text-red-300",
-  },
-  encargado: {
-    label: "Encargado",
-    icon: <Wrench className="w-3.5 h-3.5" />,
-    description: "Persona del taller (todo el sistema)",
-    color: "border-blue-500/30 text-blue-300",
-  },
-};
 
 export default function RegistroPage() {
   // form
@@ -28,7 +12,6 @@ export default function RegistroPage() {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState<UserRole>("encargado");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -46,7 +29,11 @@ export default function RegistroPage() {
     const toastId = toast.loading("Enviando solicitud...");
 
     try {
-      const res = await registerUser({ username, password, name, role });
+      // El rol se asigna del lado del servidor: por default, todos los
+      // self-registrations entran como "encargado". El admin puede ajustarlo
+      // al aprobar (o después) desde /dashboard/usuarios. Esto evita que un
+      // usuario nuevo se haga admin a sí mismo.
+      const res = await registerUser({ username, password, name, role: "encargado" });
       if (!res.success) throw new Error(res.error || "No se pudo enviar la solicitud.");
       setIsSuccess(true);
       toast.success("Solicitud enviada. Espera la aprobación del administrador.", { id: toastId });
@@ -182,48 +169,6 @@ export default function RegistroPage() {
                   className="w-full px-3 py-2.5 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-none focus:border-amber-500 font-mono-terminal"
                   disabled={isSubmitting}
                 />
-              </div>
-
-              {/* Rol */}
-              <div className="flex flex-col">
-                <label className="text-xs font-semibold text-zinc-400 font-mono-terminal uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                  <Shield className="w-4 h-4 text-zinc-500" />
-                  Rol Solicitado
-                </label>
-                <div className="grid grid-cols-1 gap-1.5">
-                  {(Object.keys(ROLE_META) as UserRole[]).map((r) => {
-                    const meta = ROLE_META[r];
-                    const active = role === r;
-                    return (
-                      <button
-                        type="button"
-                        key={r}
-                        onClick={() => setRole(r)}
-                        className={`flex items-center gap-3 px-3 py-2 border text-left transition-all rounded-none ${
-                          active
-                            ? "border-amber-500 bg-amber-500/10 text-amber-300"
-                            : `border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-zinc-700`
-                        }`}
-                      >
-                        <span className={active ? "text-amber-400" : "text-zinc-500"}>
-                          {meta.icon}
-                        </span>
-                        <div className="flex-1">
-                          <div className="text-xs font-mono-terminal uppercase tracking-wider font-bold">
-                            {meta.label}
-                          </div>
-                          <div className="text-[9px] text-zinc-500 font-mono-terminal normal-case tracking-normal">
-                            {meta.description}
-                          </div>
-                        </div>
-                        {active && <div className="w-2 h-2 bg-amber-500 rounded-none" />}
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="text-[9px] text-zinc-600 font-mono-terminal mt-1.5 leading-relaxed">
-                  El administrador puede ajustar el rol final al aprobar tu solicitud.
-                </p>
               </div>
 
               {/* Aviso de aprobación */}
