@@ -10,8 +10,6 @@ import {
 import {
   USER_ROLES,
   UserRole,
-  USER_STATUSES,
-  UserStatus,
   saveMockUser,
   deleteMockUser,
   updateMockUserRole,

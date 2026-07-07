@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { isMockMode } from "@/lib/supabase";
-import { getMockUsers, USER_ROLES, UserRole } from "@/lib/usersDb";
+import { getMockUsers, USER_ROLES } from "@/lib/usersDb";
 
 export const dynamic = "force-dynamic";
 
@@ -22,10 +22,17 @@ export async function GET() {
 
     if (isMockMode()) {
       const users = await getMockUsers();
-      const safe = users.map((u) => {
-        const { password, ...rest } = u;
-        return rest;
-      });
+      // Strip password defensively: build a fresh object instead of destructuring
+      // (destructuring the password name triggers @typescript-eslint/no-unused-vars).
+      const safe = users.map((u) => ({
+        id: u.id,
+        username: u.username,
+        name: u.name,
+        role: u.role,
+        status: u.status,
+        created_at: u.created_at,
+        updated_at: u.updated_at,
+      }));
       return NextResponse.json({ success: true, users: safe });
     }
 
