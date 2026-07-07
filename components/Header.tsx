@@ -1,16 +1,32 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { logoutUser } from "@/app/actions";
-import { Terminal, LayoutDashboard, Plus, LogOut, RefreshCw, Layers, ClipboardList, Truck, CheckSquare, Menu, X } from "lucide-react";
+import { Terminal, LayoutDashboard, Plus, LogOut, RefreshCw, Layers, ClipboardList, Truck, CheckSquare, Menu, X, Users } from "lucide-react";
 import toast from "react-hot-toast";
+
+function readRoleCookie(): "admin" | "soporte" | "taller" | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie
+    .split("; ")
+    .find((row) => row.startsWith("yacelltech_role="));
+  if (!match) return null;
+  const value = match.split("=")[1];
+  if (value === "admin" || value === "soporte" || value === "taller") return value;
+  return null;
+}
 
 export function Header() {
   const router = useRouter();
   const pathname = usePathname();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [role, setRole] = useState<"admin" | "soporte" | "taller" | null>(null);
+
+  useEffect(() => {
+    setRole(readRoleCookie());
+  }, [pathname]);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -152,6 +168,16 @@ export function Header() {
                 >
                   <Plus className="w-4 h-4" />
                   <span>Ingresar Equipos</span>
+                </button>
+              )}
+              {role && pathname !== "/dashboard/usuarios" && (
+                <button
+                  onClick={() => router.push("/dashboard/usuarios")}
+                  className="inline-flex items-center gap-2 px-3 py-2 border border-zinc-850 bg-zinc-950 hover:bg-zinc-900 text-zinc-400 hover:text-amber-500 font-mono-terminal text-xs uppercase tracking-wider transition-all cursor-pointer rounded-none"
+                  title="Gestión de Usuarios"
+                >
+                  <Users className="w-4 h-4" />
+                  <span>Usuarios</span>
                 </button>
               )}
             </>
@@ -296,6 +322,18 @@ export function Header() {
                 >
                   <Plus className="w-4 h-4 text-black" />
                   <span>Ingresar Equipos</span>
+                </button>
+              )}
+              {role && pathname !== "/dashboard/usuarios" && (
+                <button
+                  onClick={() => {
+                    router.push("/dashboard/usuarios");
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full inline-flex items-center gap-3 px-3 py-2.5 border border-zinc-850 bg-zinc-950 text-zinc-400 hover:text-amber-500 font-mono-terminal text-xs uppercase tracking-wider transition-all cursor-pointer rounded-none text-left"
+                >
+                  <Users className="w-4 h-4" />
+                  <span>Usuarios</span>
                 </button>
               )}
             </>

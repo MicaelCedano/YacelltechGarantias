@@ -3,10 +3,18 @@
 import { isMockMode, supabase } from "@/lib/supabase";
 import { generateCaseCode } from "@/lib/generateCaseCode";
 import { cookies } from "next/headers";
-import { 
-  saveMockCase, 
-  generateMockCaseCode
+import {
+  saveMockCase,
+  generateMockCaseCode,
 } from "@/lib/mockDb";
+import {
+  USER_ROLES,
+  UserRole,
+  saveMockUser,
+  deleteMockUser,
+  updateMockUserRole,
+  getMockUserByEmail,
+} from "@/lib/usersDb";
 
 interface WarrantyIntakeInput {
   imei: string;
@@ -101,18 +109,29 @@ export async function loginUser(email: string, password: string) {
     }
     // 1. AUTENTICACIÓN EN MODO LOCAL SIMULADO
     if (isMockMode()) {
-      const MOCK_USERS = [
-        { email: "admin@yacelltech.com", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Administrador" },
-        { email: "soporte@yacelltech.com", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Soporte Técnico" },
-        { email: "tecnico@yacelltech.com", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Técnico Especializado" },
-        { email: "taller@yacelltech.com", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Encargado de Taller" },
-        { email: "alejandro@yacelltech.com", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Alejandro" },
-      ];
+      // Semilla inicial: si users_db.json está vacío, sembrar los 5 usuarios base
+      // para no romper el flujo de login existente la primera vez.
+      // Las contraseñas en mock mode son placeholders; ver audit 2026-06-27.
+      const { getMockUsers } = await import("@/lib/usersDb");
+      let users = await getMockUsers();
+      if (users.length === 0) {
+        const seed = [
+          { email: "admin@yacelltech.com", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Administrador", role: "admin" as const },
+          { email: "soporte@yacelltech.com", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Soporte Técnico", role: "soporte" as const },
+          { email: "tecnico@yacelltech.com", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Técnico Especializado", role: "soporte" as const },
+          { email: "taller@yacelltech.com", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Encargado de Taller", role: "taller" as const },
+          { email: "alejandro@yacelltech.com", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Alejandro", role: "taller" as const },
+        ];
+        for (const u of seed) {
+          await saveMockUser(u);
+        }
+        users = await getMockUsers();
+      }
 
-      const foundUser = MOCK_USERS.find(
-        (u) => 
-          (u.email.toLowerCase() === email.toLowerCase() || 
-           u.email.split("@")[0].toLowerCase() === email.toLowerCase()) && 
+      const foundUser = users.find(
+        (u) =>
+          (u.email.toLowerCase() === email.toLowerCase() ||
+           u.email.split("@")[0].toLowerCase() === email.toLowerCase()) &&
           u.password === password
       );
 
@@ -125,11 +144,26 @@ export async function loginUser(email: string, password: string) {
           path: "/",
           sameSite: "lax",
         });
-        return { success: true };
+        // Cookie legible en cliente con el rol, para gating de UI.
+        cookies().set("yacelltech_role", foundUser.role, {
+          httpOnly: false,
+          secure: process.env.NODE_ENV === "production",
+          maxAge: 365 * 24 * 60 * 60,
+          path: "/",
+          sameSite: "lax",
+        });
+        cookies().set("yacelltech_user", foundUser.name, {
+          httpOnly: false,
+          secure: process.env.NODE_ENV === "production",
+          maxAge: 365 * 24 * 60 * 60,
+          path: "/",
+          sameSite: "lax",
+        });
+        return { success: true, role: foundUser.role };
       } else {
-        return { 
-          success: false, 
-          error: "Credenciales de prueba incorrectas. Pruebe con: admin o soporte." 
+        return {
+          success: false,
+          error: "Credenciales de prueba incorrectas. Pruebe con: admin o soporte."
         };
       }
     }
@@ -174,16 +208,168 @@ export async function loginUser(email: string, password: string) {
 export async function logoutUser() {
   try {
     cookies().delete("yacelltech_token");
-    
+    cookies().delete("yacelltech_role");
+    cookies().delete("yacelltech_user");
+
     // Si no estamos en modo simulado, desautenticar en Supabase
     if (!isMockMode()) {
       await supabase.auth.signOut();
     }
-    
+
     return { success: true };
   } catch (error) {
     console.error("Error en Server Action logoutUser:", error);
     return { success: false, error: "Ocurrió un error al cerrar la sesión." };
+  }
+}
+
+/**
+ * Lee la cookie de rol del request actual.
+ * Devuelve null si no hay sesión o si la cookie no es uno de los roles válidos.
+ * Se usa para gating de UI y server actions del módulo de usuarios.
+ */
+export async function getCurrentRole(): Promise<UserRole | null> {
+  const role = cookies().get("yacelltech_role")?.value;
+  if (role && (USER_ROLES as string[]).includes(role)) {
+    return role as UserRole;
+  }
+  return null;
+}
+
+/**
+ * Crear un usuario nuevo.
+ * Permitido a: admin, soporte, taller (cualquiera logueado con rol alto).
+ * Persistencia mock-only por ahora (mismo patrón que el resto de la app).
+ */
+export async function createUser(input: {
+  email: string;
+  password: string;
+  name: string;
+  role: UserRole;
+}) {
+  try {
+    // Gate: solo roles altos pueden crear
+    const currentRole = await getCurrentRole();
+    if (!currentRole) {
+      return { success: false, error: "No hay sesión activa o el rol no es válido." };
+    }
+
+    // Validaciones de payload
+    const email = input.email.trim().toLowerCase();
+    const name = input.name.trim();
+    const password = input.password;
+    if (!email || !email.includes("@")) {
+      return { success: false, error: "El correo electrónico no es válido." };
+    }
+    if (!password || password.length < 3) {
+      return { success: false, error: "La contraseña debe tener al menos 3 caracteres." };
+    }
+    if (!name) {
+      return { success: false, error: "El nombre es obligatorio." };
+    }
+    if (!(USER_ROLES as string[]).includes(input.role)) {
+      return { success: false, error: "Rol no válido." };
+    }
+
+    // Duplicado
+    const existing = await getMockUserByEmail(email);
+    if (existing) {
+      return { success: false, error: "Ya existe un usuario con ese correo." };
+    }
+
+    const created = await saveMockUser({ email, password, name, role: input.role });
+    return { success: true, user: { ...created, password: undefined } };
+  } catch (error) {
+    console.error("Error en createUser:", error);
+    const message = error instanceof Error ? error.message : "Error interno al crear usuario";
+    return { success: false, error: message };
+  }
+}
+
+/**
+ * Eliminar un usuario por id.
+ * Permitido SOLO a: admin.
+ */
+export async function removeUser(userId: string) {
+  try {
+    const currentRole = await getCurrentRole();
+    if (currentRole !== "admin") {
+      return { success: false, error: "Solo el administrador puede eliminar usuarios." };
+    }
+    if (!userId) {
+      return { success: false, error: "ID de usuario requerido." };
+    }
+
+    // Protección: no permitir que el admin se borre a sí mismo (sin email de sesión
+    // a mano, comparamos contra el cookie de nombre/email no es viable acá; el
+    // chequeo mínimo es no borrar si queda 0 admin)
+    const { getMockUsers } = await import("@/lib/usersDb");
+    const all = await getMockUsers();
+    const target = all.find((u) => u.id === userId);
+    if (!target) {
+      return { success: false, error: "Usuario no encontrado." };
+    }
+    const adminCount = all.filter((u) => u.role === "admin").length;
+    if (target.role === "admin" && adminCount <= 1) {
+      return {
+        success: false,
+        error: "No se puede eliminar al último administrador del sistema.",
+      };
+    }
+
+    const ok = await deleteMockUser(userId);
+    return ok
+      ? { success: true }
+      : { success: false, error: "No se pudo eliminar el usuario." };
+  } catch (error) {
+    console.error("Error en removeUser:", error);
+    const message = error instanceof Error ? error.message : "Error interno al eliminar usuario";
+    return { success: false, error: message };
+  }
+}
+
+/**
+ * Cambiar el rol de un usuario.
+ * Permitido SOLO a: admin.
+ */
+export async function changeUserRole(userId: string, newRole: UserRole) {
+  try {
+    const currentRole = await getCurrentRole();
+    if (currentRole !== "admin") {
+      return { success: false, error: "Solo el administrador puede cambiar roles." };
+    }
+    if (!userId) {
+      return { success: false, error: "ID de usuario requerido." };
+    }
+    if (!(USER_ROLES as string[]).includes(newRole)) {
+      return { success: false, error: "Rol no válido." };
+    }
+
+    // Si está degradando a un admin, no permitir que quede 0 admin
+    const { getMockUsers } = await import("@/lib/usersDb");
+    const all = await getMockUsers();
+    const target = all.find((u) => u.id === userId);
+    if (!target) {
+      return { success: false, error: "Usuario no encontrado." };
+    }
+    if (target.role === "admin" && newRole !== "admin") {
+      const adminCount = all.filter((u) => u.role === "admin").length;
+      if (adminCount <= 1) {
+        return {
+          success: false,
+          error: "No se puede degradar al último administrador del sistema.",
+        };
+      }
+    }
+
+    const updated = await updateMockUserRole(userId, newRole);
+    return updated
+      ? { success: true, user: { ...updated, password: undefined } }
+      : { success: false, error: "No se pudo actualizar el rol." };
+  } catch (error) {
+    console.error("Error en changeUserRole:", error);
+    const message = error instanceof Error ? error.message : "Error interno al cambiar rol";
+    return { success: false, error: message };
   }
 }
 

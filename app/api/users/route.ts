@@ -1,0 +1,48 @@
+import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { isMockMode } from "@/lib/supabase";
+import { getMockUsers, USER_ROLES, UserRole } from "@/lib/usersDb";
+
+export const dynamic = "force-dynamic";
+
+/**
+ * GET /api/users
+ * Devuelve la lista de usuarios (sin password).
+ * Gate: solo accesible si hay un rol válido en la cookie.
+ */
+export async function GET() {
+  try {
+    const roleCookie = cookies().get("yacelltech_role")?.value;
+    if (!roleCookie || !(USER_ROLES as string[]).includes(roleCookie)) {
+      return NextResponse.json(
+        { success: false, error: "Acceso no autorizado." },
+        { status: 403 }
+      );
+    }
+
+    if (isMockMode()) {
+      const users = await getMockUsers();
+      const safe = users.map((u) => {
+        const { password, ...rest } = u;
+        return rest;
+      });
+      return NextResponse.json({ success: true, users: safe });
+    }
+
+    // Modo Supabase (futuro): devolver desde tabla `app_users` cuando exista.
+    return NextResponse.json(
+      {
+        success: false,
+        error:
+          "Listado de usuarios en Supabase aún no implementado. Configure MOCK_MODE o agregue la tabla app_users.",
+      },
+      { status: 501 }
+    );
+  } catch (error) {
+    console.error("Error en GET /api/users:", error);
+    return NextResponse.json(
+      { success: false, error: "Error interno al listar usuarios." },
+      { status: 500 }
+    );
+  }
+}
