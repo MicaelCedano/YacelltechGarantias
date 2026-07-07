@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { logoutUser, countPendingUsers } from "@/app/actions";
-import { Terminal, LayoutDashboard, Plus, LogOut, RefreshCw, Layers, ClipboardList, Truck, CheckSquare, Menu, X, Users, Bell } from "lucide-react";
+import { Terminal, LayoutDashboard, Plus, LogOut, RefreshCw, Layers, ClipboardList, Truck, CheckSquare, Menu, X, Users } from "lucide-react";
 import toast from "react-hot-toast";
 
 function readRoleCookie(): "admin" | "soporte" | "taller" | null {

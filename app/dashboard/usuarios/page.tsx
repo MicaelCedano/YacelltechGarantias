@@ -19,7 +19,6 @@ import {
   Bell,
   Check,
   X,
-  UserCheck,
 } from "lucide-react";
 import { Header } from "@/components/Header";
 import { createUser, removeUser, changeUserRole, approveUser, rejectUser } from "@/app/actions";
@@ -548,14 +547,9 @@ export default function UsuariosPage() {
 
                     {isAdmin ? (
                       <div className="flex items-center gap-1 shrink-0">
-                        {/* Selector opcional para cambiar el rol al aprobar */}
+                        {/* Selector del rol final al aprobar (se lee en el click de Aprobar) */}
                         <select
                           defaultValue={u.role}
-                          onChange={(e) => {
-                            // pequeño hack: actualizamos el rol en el backend
-                            // (no se ve reflejado en la lista hasta recargar)
-                            // Para simplificar, lo manejamos en handleApprove
-                          }}
                           id={`role-${u.id}`}
                           className="text-[10px] font-mono-terminal uppercase tracking-wider bg-zinc-900 border border-zinc-800 text-zinc-300 px-2 py-1.5 rounded-none cursor-pointer focus:border-amber-500"
                           title="Rol final al aprobar"

@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { registerUser } from "@/app/actions";
 import { Terminal, ShieldAlert, KeyRound, User, AtSign, UserPlus, ArrowLeft, Shield, Wrench, HardHat, Eye, EyeOff, CheckCircle2 } from "lucide-react";
@@ -30,8 +29,6 @@ const ROLE_META: Record<UserRole, { label: string; icon: React.ReactNode; descri
 };
 
 export default function RegistroPage() {
-  const router = useRouter();
-
   // form
   const [username, setUsername] = useState("");
   const [name, setName] = useState("");
