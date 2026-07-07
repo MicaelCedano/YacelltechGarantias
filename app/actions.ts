@@ -10,9 +10,12 @@ import {
 import {
   USER_ROLES,
   UserRole,
+  USER_STATUSES,
+  UserStatus,
   saveMockUser,
   deleteMockUser,
   updateMockUserRole,
+  updateMockUserStatus,
   getMockUserByUsername,
 } from "@/lib/usersDb";
 
@@ -134,37 +137,47 @@ export async function loginUser(username: string, password: string) {
           u.password === password
       );
 
-      if (foundUser) {
-        // Generar una cookie de sesión simulada (por 1 año para mantenerla abierta)
-        cookies().set("yacelltech_token", "mock-session-token", {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          maxAge: 365 * 24 * 60 * 60, // 1 año
-          path: "/",
-          sameSite: "lax",
-        });
-        // Cookie legible en cliente con el rol, para gating de UI.
-        cookies().set("yacelltech_role", foundUser.role, {
-          httpOnly: false,
-          secure: process.env.NODE_ENV === "production",
-          maxAge: 365 * 24 * 60 * 60,
-          path: "/",
-          sameSite: "lax",
-        });
-        cookies().set("yacelltech_user", foundUser.name, {
-          httpOnly: false,
-          secure: process.env.NODE_ENV === "production",
-          maxAge: 365 * 24 * 60 * 60,
-          path: "/",
-          sameSite: "lax",
-        });
-        return { success: true, role: foundUser.role };
-      } else {
+      if (!foundUser) {
         return {
           success: false,
-          error: "Credenciales de prueba incorrectas. Pruebe con: admin o soporte."
+          error: "Credenciales incorrectas. Verifique su usuario y contraseña."
         };
       }
+
+      // Bloquear cuentas pendientes: si la cuenta existe pero el admin aún no
+      // la aprobó, mostrar mensaje específico para que el usuario sepa que
+      // tiene que esperar.
+      if (foundUser.status !== "activo") {
+        return {
+          success: false,
+          error: "Tu solicitud de cuenta está pendiente de aprobación por el administrador. Te avisaremos cuando esté activa.",
+        };
+      }
+
+      // Generar una cookie de sesión simulada (por 1 año para mantenerla abierta)
+      cookies().set("yacelltech_token", "mock-session-token", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 365 * 24 * 60 * 60, // 1 año
+        path: "/",
+        sameSite: "lax",
+      });
+      // Cookie legible en cliente con el rol, para gating de UI.
+      cookies().set("yacelltech_role", foundUser.role, {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 365 * 24 * 60 * 60,
+        path: "/",
+        sameSite: "lax",
+      });
+      cookies().set("yacelltech_user", foundUser.name, {
+        httpOnly: false,
+        secure: process.env.NODE_ENV === "production",
+        maxAge: 365 * 24 * 60 * 60,
+        path: "/",
+        sameSite: "lax",
+      });
+      return { success: true, role: foundUser.role };
     }
 
     // 2. AUTENTICACIÓN EN MODO REAL CON SUPABASE
@@ -242,6 +255,12 @@ export async function getCurrentRole(): Promise<UserRole | null> {
  * Permitido a: admin, soporte, taller (cualquiera logueado con rol alto).
  * Persistencia mock-only por ahora (mismo patrón que el resto de la app).
  */
+/**
+ * Crear un usuario directo, sin aprobación (atajo del admin).
+ * Permitido SOLO a: admin.
+ * Para que un usuario nuevo entre por su cuenta, debe usar `registerUser` y
+ * luego el admin lo aprueba con `approveUser`.
+ */
 export async function createUser(input: {
   username: string;
   password: string;
@@ -249,10 +268,10 @@ export async function createUser(input: {
   role: UserRole;
 }) {
   try {
-    // Gate: solo roles altos pueden crear
+    // Gate: SOLO admin puede crear cuentas directas (sin aprobación)
     const currentRole = await getCurrentRole();
-    if (!currentRole) {
-      return { success: false, error: "No hay sesión activa o el rol no es válido." };
+    if (currentRole !== "admin") {
+      return { success: false, error: "Solo el administrador puede crear cuentas de forma directa. Los demás usuarios deben solicitar registro." };
     }
 
     // Validaciones de payload
@@ -281,12 +300,135 @@ export async function createUser(input: {
       return { success: false, error: "Ya existe un usuario con ese nombre." };
     }
 
-    const created = await saveMockUser({ username, password, name, role: input.role });
+    // Creación directa: ya entra como "activo"
+    const created = await saveMockUser({ username, password, name, role: input.role, status: "activo" });
     return { success: true, user: { ...created, password: undefined } };
   } catch (error) {
     console.error("Error en createUser:", error);
     const message = error instanceof Error ? error.message : "Error interno al crear usuario";
     return { success: false, error: message };
+  }
+}
+
+/**
+ * Self-registration: un usuario nuevo se registra solo.
+ * Sin gate: cualquiera puede pedir una cuenta. Queda con status "pendiente"
+ * hasta que un admin la apruebe con `approveUser`.
+ * El login está bloqueado mientras la cuenta esté pendiente.
+ */
+export async function registerUser(input: {
+  username: string;
+  password: string;
+  name: string;
+  role: UserRole;
+}) {
+  try {
+    // Validaciones de payload
+    const username = input.username.trim().toLowerCase();
+    const name = input.name.trim();
+    const password = input.password;
+    if (!username || username.length < 2) {
+      return { success: false, error: "El nombre de usuario debe tener al menos 2 caracteres." };
+    }
+    if (!/^[a-z0-9._-]+$/.test(username)) {
+      return { success: false, error: "El usuario solo puede contener letras minúsculas, números, punto, guion y guion bajo." };
+    }
+    if (!password || password.length < 3) {
+      return { success: false, error: "La contraseña debe tener al menos 3 caracteres." };
+    }
+    if (!name) {
+      return { success: false, error: "El nombre es obligatorio." };
+    }
+    if (!(USER_ROLES as string[]).includes(input.role)) {
+      return { success: false, error: "Rol no válido." };
+    }
+
+    // Duplicado: si el username ya existe (activo o pendiente), rechazar.
+    const existing = await getMockUserByUsername(username);
+    if (existing) {
+      return {
+        success: false,
+        error: existing.status === "pendiente"
+          ? "Ya existe una solicitud pendiente con ese nombre de usuario. Espera a que el administrador la revise."
+          : "Ese nombre de usuario ya está registrado.",
+      };
+    }
+
+    const created = await saveMockUser({ username, password, name, role: input.role, status: "pendiente" });
+    return { success: true, user: { ...created, password: undefined } };
+  } catch (error) {
+    console.error("Error en registerUser:", error);
+    const message = error instanceof Error ? error.message : "Error interno al registrar la solicitud";
+    return { success: false, error: message };
+  }
+}
+
+/**
+ * Aprobar una solicitud pendiente: pasa la cuenta a "activo".
+ * Permitido a: admin (puede asignar el rol final, opcionalmente distinto al pedido).
+ */
+export async function approveUser(userId: string, finalRole?: UserRole) {
+  try {
+    const currentRole = await getCurrentRole();
+    if (currentRole !== "admin") {
+      return { success: false, error: "Solo el administrador puede aprobar solicitudes." };
+    }
+    if (!userId) {
+      return { success: false, error: "ID de usuario requerido." };
+    }
+
+    // Si pasan finalRole, primero actualizo el rol y después el status.
+    if (finalRole && (USER_ROLES as string[]).includes(finalRole)) {
+      await updateMockUserRole(userId, finalRole);
+    }
+    const updated = await updateMockUserStatus(userId, "activo");
+    return updated
+      ? { success: true, user: { ...updated, password: undefined } }
+      : { success: false, error: "No se pudo aprobar la solicitud." };
+  } catch (error) {
+    console.error("Error en approveUser:", error);
+    const message = error instanceof Error ? error.message : "Error interno al aprobar la solicitud";
+    return { success: false, error: message };
+  }
+}
+
+/**
+ * Rechazar una solicitud pendiente: borra la cuenta.
+ * Permitido a: admin.
+ */
+export async function rejectUser(userId: string) {
+  try {
+    const currentRole = await getCurrentRole();
+    if (currentRole !== "admin") {
+      return { success: false, error: "Solo el administrador puede rechazar solicitudes." };
+    }
+    if (!userId) {
+      return { success: false, error: "ID de usuario requerido." };
+    }
+    const ok = await deleteMockUser(userId);
+    return ok
+      ? { success: true }
+      : { success: false, error: "No se pudo rechazar la solicitud." };
+  } catch (error) {
+    console.error("Error en rejectUser:", error);
+    const message = error instanceof Error ? error.message : "Error interno al rechazar la solicitud";
+    return { success: false, error: message };
+  }
+}
+
+/**
+ * Cuenta cuántas solicitudes están pendientes de aprobación.
+ * Se usa para mostrar el badge 🔔 en el header.
+ * Sin gate: es un número inocuo. Si hubiera info sensible, gatear.
+ */
+export async function countPendingUsers(): Promise<number> {
+  try {
+    const { getMockUsers } = await import("@/lib/usersDb");
+    const users = await getMockUsers();
+    return users.filter((u) => u.status === "pendiente").length;
+  } catch (error) {
+    console.error("Error en countPendingUsers:", error);
+    return 0;
   }
 }
 

@@ -5,12 +5,24 @@ import { nowSDISO } from "./tz-utils";
 /**
  * Roles permitidos en el sistema.
  * - admin: control total (incluye borrar / cambiar rol de otros usuarios)
- * - soporte: técnico especializado (puede crear usuarios, no borrar ni cambiar rol)
- * - taller: encargado de taller (puede crear usuarios, no borrar ni cambiar rol)
+ * - soporte: técnico especializado
+ * - taller: encargado de taller
  */
 export type UserRole = "admin" | "soporte" | "taller";
 
 export const USER_ROLES: UserRole[] = ["admin", "soporte", "taller"];
+
+/**
+ * Estado de aprobación de una cuenta.
+ * - "pendiente": creada por self-registration, todavía no aprobada por admin
+ * - "activo": puede loguearse y usar el sistema
+ *
+ * Si en el futuro hace falta "rechazado" o "suspendido", se agrega acá como
+ * cambio de esquema, no de UI.
+ */
+export type UserStatus = "pendiente" | "activo";
+
+export const USER_STATUSES: UserStatus[] = ["pendiente", "activo"];
 
 export interface AppUser {
   id: string;
@@ -18,6 +30,7 @@ export interface AppUser {
   password: string;
   name: string;
   role: UserRole;
+  status: UserStatus;
   created_at: string;
   updated_at: string;
 }
@@ -60,6 +73,7 @@ export async function saveMockUser(input: {
   password: string;
   name: string;
   role: UserRole;
+  status?: UserStatus;
 }): Promise<AppUser> {
   const users = readDb();
   const timestamp = nowSDISO();
@@ -69,6 +83,7 @@ export async function saveMockUser(input: {
     password: input.password,
     name: input.name.trim(),
     role: input.role,
+    status: input.status ?? "activo",
     created_at: timestamp,
     updated_at: timestamp,
   };
@@ -93,6 +108,22 @@ export async function updateMockUserRole(id: string, role: UserRole): Promise<Ap
   users[idx] = {
     ...users[idx],
     role,
+    updated_at: nowSDISO(),
+  };
+  writeDb(users);
+  return users[idx];
+}
+
+export async function updateMockUserStatus(
+  id: string,
+  status: UserStatus
+): Promise<AppUser | null> {
+  const users = readDb();
+  const idx = users.findIndex((u) => u.id === id);
+  if (idx === -1) return null;
+  users[idx] = {
+    ...users[idx],
+    status,
     updated_at: nowSDISO(),
   };
   writeDb(users);

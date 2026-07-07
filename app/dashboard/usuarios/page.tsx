@@ -16,17 +16,22 @@ import {
   RefreshCw,
   AtSign,
   User as UserIcon,
+  Bell,
+  Check,
+  X,
+  UserCheck,
 } from "lucide-react";
 import { Header } from "@/components/Header";
-import { createUser, removeUser, changeUserRole } from "@/app/actions";
+import { createUser, removeUser, changeUserRole, approveUser, rejectUser } from "@/app/actions";
 import { getCurrentRole } from "@/app/actions";
-import type { UserRole } from "@/lib/usersDb";
+import type { UserRole, UserStatus } from "@/lib/usersDb";
 
 interface UserRow {
   id: string;
   username: string;
   name: string;
   role: UserRole;
+  status: UserStatus;
   created_at: string;
   updated_at: string;
 }
@@ -49,21 +54,23 @@ const ROLE_META: Record<UserRole, { label: string; color: string; icon: React.Re
   },
 };
 
+type Tab = "activos" | "pendientes";
+
 export default function UsuariosPage() {
   const router = useRouter();
   const [currentRole, setCurrentRole] = useState<UserRole | null>(null);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState<Tab>("activos");
 
-  // form
+  // form (solo lo usa el admin para crear atajos)
   const [username, setUsername] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>("taller");
   const [showPassword, setShowPassword] = useState(false);
 
-  // Cargar rol y lista
   const loadData = async () => {
     setIsLoading(true);
     try {
@@ -102,8 +109,7 @@ export default function UsuariosPage() {
     try {
       const res = await createUser({ username, password, name, role });
       if (!res.success) throw new Error(res.error || "No se pudo crear el usuario.");
-      toast.success(`Usuario ${name} creado con rol ${ROLE_META[role].label}.`, { id: toastId });
-      // Reset
+      toast.success(`Usuario ${name} creado y activo.`, { id: toastId });
       setUsername("");
       setName("");
       setPassword("");
@@ -123,7 +129,7 @@ export default function UsuariosPage() {
       return;
     }
     const ok = window.confirm(
-      `¿Eliminar al usuario ${user.name} (${user.username})? Esta acción no se puede deshacer.`
+      `¿Eliminar al usuario ${user.name} (@${user.username})? Esta acción no se puede deshacer.`
     );
     if (!ok) return;
 
@@ -157,7 +163,47 @@ export default function UsuariosPage() {
     }
   };
 
-  // Si no hay rol válido, no mostrar la página
+  const handleApprove = async (user: UserRow, finalRole?: UserRole) => {
+    if (currentRole !== "admin") {
+      toast.error("Solo el administrador puede aprobar.");
+      return;
+    }
+    const toastId = toast.loading("Aprobando solicitud...");
+    try {
+      const res = await approveUser(user.id, finalRole);
+      if (!res.success) throw new Error(res.error || "No se pudo aprobar.");
+      toast.success(`Solicitud de @${user.username} aprobada.`, { id: toastId });
+      await loadData();
+      setActiveTab("activos");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Error al aprobar";
+      toast.error(message, { id: toastId });
+    }
+  };
+
+  const handleReject = async (user: UserRow) => {
+    if (currentRole !== "admin") {
+      toast.error("Solo el administrador puede rechazar.");
+      return;
+    }
+    const ok = window.confirm(
+      `¿Rechazar y eliminar la solicitud de @${user.username}? Esta acción no se puede deshacer.`
+    );
+    if (!ok) return;
+
+    const toastId = toast.loading("Rechazando solicitud...");
+    try {
+      const res = await rejectUser(user.id);
+      if (!res.success) throw new Error(res.error || "No se pudo rechazar.");
+      toast.success("Solicitud rechazada.", { id: toastId });
+      await loadData();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Error al rechazar";
+      toast.error(message, { id: toastId });
+    }
+  };
+
+  // Si no hay rol válido
   if (!currentRole && !isLoading) {
     return (
       <main className="flex-1 p-4 md:p-8 max-w-6xl mx-auto w-full">
@@ -181,6 +227,9 @@ export default function UsuariosPage() {
     );
   }
 
+  const activeUsers = users.filter((u) => u.status === "activo");
+  const pendingUsers = users.filter((u) => u.status === "pendiente");
+
   return (
     <main className="flex-1 p-4 md:p-8 max-w-6xl mx-auto w-full">
       <Header />
@@ -196,7 +245,7 @@ export default function UsuariosPage() {
               Gestión de Usuarios
             </h1>
             <p className="text-xs text-zinc-500 font-mono-terminal uppercase tracking-widest">
-              Solo personal autorizado puede crear cuentas en el sistema
+              Cuentas activas, solicitudes pendientes y creación directa
             </p>
           </div>
         </div>
@@ -210,180 +259,183 @@ export default function UsuariosPage() {
         </button>
       </div>
 
-      {/* Aviso de permisos según rol */}
-      <div
-        className={`mb-6 p-3 border font-mono-terminal text-[10px] uppercase tracking-wider leading-relaxed ${
-          currentRole === "admin"
-            ? "border-red-500/20 bg-red-500/5 text-red-300"
-            : "border-amber-500/20 bg-amber-500/5 text-amber-300"
-        }`}
-      >
-        {currentRole === "admin" ? (
-          <span>
-            <Shield className="w-3.5 h-3.5 inline-block mr-1.5 -mt-0.5" />
-            Eres <b>Administrador</b>: puedes crear, eliminar y cambiar el rol de cualquier usuario.
-          </span>
-        ) : (
-          <span>
-            <Shield className="w-3.5 h-3.5 inline-block mr-1.5 -mt-0.5" />
-            Tu rol actual (<b>{currentRole ? ROLE_META[currentRole].label : ""}</b>) permite
-            <b> crear usuarios</b>, pero solo el administrador puede borrarlos o cambiar su rol.
-          </span>
-        )}
-      </div>
+      {/* Banner para no-admin: explica qué pueden y qué no */}
+      {currentRole !== "admin" && (
+        <div className="mb-6 p-3 border border-amber-500/20 bg-amber-500/5 text-amber-300 font-mono-terminal text-[10px] uppercase tracking-wider leading-relaxed">
+          <Shield className="w-3.5 h-3.5 inline-block mr-1.5 -mt-0.5" />
+          Tu rol actual (<b>{currentRole ? ROLE_META[currentRole].label : ""}</b>) es de
+          <b> solo lectura</b> en este módulo. Solo el administrador puede crear, aprobar o eliminar cuentas.
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-        {/* Formulario de alta — 2 columnas */}
-        <section className="lg:col-span-2 bg-[#121212] border border-zinc-850 p-5">
-          <div className="flex items-center gap-2 mb-4 border-b border-zinc-900 pb-3">
-            <UserPlus className="w-5 h-5 text-amber-500" />
-            <h2 className="text-sm font-bold font-mono-terminal uppercase tracking-wider text-white">
-              Crear Usuario
-            </h2>
-          </div>
-
-          <form onSubmit={handleCreate} className="space-y-4">
-            {/* Nombre */}
-            <div className="flex flex-col">
-              <label className="text-[10px] font-semibold text-zinc-400 font-mono-terminal uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                <UserIcon className="w-3.5 h-3.5 text-zinc-500" />
-                Nombre Completo
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="ej. María Pérez"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-none focus:border-amber-500 font-mono-terminal"
-                disabled={isSubmitting}
-              />
+        {/* Formulario admin-only para creación directa — 2 columnas */}
+        {currentRole === "admin" && (
+          <section className="lg:col-span-2 bg-[#121212] border border-zinc-850 p-5">
+            <div className="flex items-center gap-2 mb-4 border-b border-zinc-900 pb-3">
+              <UserPlus className="w-5 h-5 text-amber-500" />
+              <h2 className="text-sm font-bold font-mono-terminal uppercase tracking-wider text-white">
+                Crear Directo
+              </h2>
+              <span className="ml-auto text-[9px] text-zinc-600 font-mono-terminal uppercase tracking-widest">
+                sin aprobación
+              </span>
             </div>
 
-            {/* Usuario de acceso (sin correo electronico) */}
-            <div className="flex flex-col">
-              <label className="text-[10px] font-semibold text-zinc-400 font-mono-terminal uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                <AtSign className="w-3.5 h-3.5 text-zinc-500" />
-                Usuario de Acceso
-              </label>
-              <input
-                type="text"
-                required
-                minLength={2}
-                pattern="[a-z0-9._\-]+"
-                placeholder="ej. ramon, maria.perez"
-                value={username}
-                onChange={(e) => setUsername(e.target.value.toLowerCase())}
-                className="w-full px-3 py-2 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-none focus:border-amber-500 font-mono-terminal"
-                disabled={isSubmitting}
-              />
-            </div>
-
-            {/* Password */}
-            <div className="flex flex-col">
-              <label className="text-[10px] font-semibold text-zinc-400 font-mono-terminal uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                <KeyRound className="w-3.5 h-3.5 text-zinc-500" />
-                Contraseña Provisional
-              </label>
-              <div className="relative">
+            <form onSubmit={handleCreate} className="space-y-4">
+              <div className="flex flex-col">
+                <label className="text-[10px] font-semibold text-zinc-400 font-mono-terminal uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                  <UserIcon className="w-3.5 h-3.5 text-zinc-500" />
+                  Nombre Completo
+                </label>
                 <input
-                  type={showPassword ? "text" : "password"}
+                  type="text"
                   required
-                  minLength={3}
-                  placeholder="mínimo 3 caracteres"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-3 py-2 pr-10 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-none focus:border-amber-500 font-mono-terminal"
+                  placeholder="ej. María Pérez"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full px-3 py-2 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-none focus:border-amber-500 font-mono-terminal"
                   disabled={isSubmitting}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-amber-500 transition-colors p-1"
-                  tabIndex={-1}
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
               </div>
-            </div>
 
-            {/* Rol */}
-            <div className="flex flex-col">
-              <label className="text-[10px] font-semibold text-zinc-400 font-mono-terminal uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                <Shield className="w-3.5 h-3.5 text-zinc-500" />
-                Rol Asignado
-              </label>
-              <div className="grid grid-cols-1 gap-2">
-                {(Object.keys(ROLE_META) as UserRole[]).map((r) => {
-                  const meta = ROLE_META[r];
-                  const active = role === r;
-                  return (
-                    <button
-                      type="button"
-                      key={r}
-                      onClick={() => setRole(r)}
-                      className={`flex items-center gap-3 px-3 py-2.5 border text-left transition-all rounded-none ${
-                        active
-                          ? "border-amber-500 bg-amber-500/10 text-amber-300"
-                          : "border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-zinc-700"
-                      }`}
-                    >
-                      <span className={active ? "text-amber-400" : "text-zinc-500"}>
-                        {meta.icon}
-                      </span>
-                      <div className="flex-1">
-                        <div className="text-xs font-mono-terminal uppercase tracking-wider font-bold">
-                          {meta.label}
-                        </div>
-                        <div className="text-[9px] text-zinc-500 font-mono-terminal normal-case tracking-normal">
-                          {r === "admin"
-                            ? "Control total del sistema"
-                            : r === "soporte"
-                            ? "Técnico especializado"
-                            : "Encargado de taller"}
-                        </div>
-                      </div>
-                      {active && (
-                        <div className="w-2 h-2 bg-amber-500 rounded-none" />
-                      )}
-                    </button>
-                  );
-                })}
+              <div className="flex flex-col">
+                <label className="text-[10px] font-semibold text-zinc-400 font-mono-terminal uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                  <AtSign className="w-3.5 h-3.5 text-zinc-500" />
+                  Usuario de Acceso
+                </label>
+                <input
+                  type="text"
+                  required
+                  minLength={2}
+                  pattern="[a-z0-9._\-]+"
+                  placeholder="ej. ramon, maria.perez"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase())}
+                  className="w-full px-3 py-2 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-none focus:border-amber-500 font-mono-terminal"
+                  disabled={isSubmitting}
+                />
               </div>
-            </div>
 
+              <div className="flex flex-col">
+                <label className="text-[10px] font-semibold text-zinc-400 font-mono-terminal uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                  <KeyRound className="w-3.5 h-3.5 text-zinc-500" />
+                  Contraseña Provisional
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    minLength={3}
+                    placeholder="mínimo 3 caracteres"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full px-3 py-2 pr-10 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-none focus:border-amber-500 font-mono-terminal"
+                    disabled={isSubmitting}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-amber-500 transition-colors p-1"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-col">
+                <label className="text-[10px] font-semibold text-zinc-400 font-mono-terminal uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5 text-zinc-500" />
+                  Rol Asignado
+                </label>
+                <div className="grid grid-cols-1 gap-2">
+                  {(Object.keys(ROLE_META) as UserRole[]).map((r) => {
+                    const meta = ROLE_META[r];
+                    const active = role === r;
+                    return (
+                      <button
+                        type="button"
+                        key={r}
+                        onClick={() => setRole(r)}
+                        className={`flex items-center gap-3 px-3 py-2 border text-left transition-all rounded-none ${
+                          active
+                            ? "border-amber-500 bg-amber-500/10 text-amber-300"
+                            : "border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-zinc-700"
+                        }`}
+                      >
+                        <span className={active ? "text-amber-400" : "text-zinc-500"}>
+                          {meta.icon}
+                        </span>
+                        <div className="flex-1">
+                          <div className="text-xs font-mono-terminal uppercase tracking-wider font-bold">
+                            {meta.label}
+                          </div>
+                        </div>
+                        {active && <div className="w-2 h-2 bg-amber-500 rounded-none" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full h-11 bg-amber-500 hover:bg-amber-600 disabled:bg-zinc-800 disabled:text-zinc-600 text-black font-mono-terminal text-xs uppercase tracking-wider font-bold transition-all rounded-none cursor-pointer flex items-center justify-center gap-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                    <span>CREANDO...</span>
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="w-4 h-4" />
+                    <span>CREAR USUARIO</span>
+                  </>
+                )}
+              </button>
+            </form>
+          </section>
+        )}
+
+        {/* Lista con pestañas — 3 columnas (o 5 si no sos admin) */}
+        <section className={`bg-[#121212] border border-zinc-850 p-5 ${currentRole === "admin" ? "lg:col-span-3" : "lg:col-span-5"}`}>
+          {/* Tabs */}
+          <div className="flex items-center gap-1 mb-4 border-b border-zinc-900 pb-0">
             <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full h-11 bg-amber-500 hover:bg-amber-600 disabled:bg-zinc-800 disabled:text-zinc-600 text-black font-mono-terminal text-xs uppercase tracking-wider font-bold transition-all rounded-none cursor-pointer flex items-center justify-center gap-2"
+              onClick={() => setActiveTab("activos")}
+              className={`flex items-center gap-2 px-3 py-2.5 font-mono-terminal text-xs uppercase tracking-wider transition-all border-b-2 -mb-px ${
+                activeTab === "activos"
+                  ? "border-amber-500 text-amber-400"
+                  : "border-transparent text-zinc-500 hover:text-zinc-300"
+              }`}
             >
-              {isSubmitting ? (
-                <>
-                  <span className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                  <span>CREANDO USUARIO...</span>
-                </>
-              ) : (
-                <>
-                  <UserPlus className="w-4 h-4" />
-                  <span>CREAR USUARIO</span>
-                </>
-              )}
+              <Users className="w-3.5 h-3.5" />
+              <span>Activos</span>
+              <span className="text-[10px] text-zinc-600">({activeUsers.length})</span>
             </button>
-          </form>
-        </section>
-
-        {/* Lista — 3 columnas */}
-        <section className="lg:col-span-3 bg-[#121212] border border-zinc-850 p-5">
-          <div className="flex items-center justify-between gap-3 mb-4 border-b border-zinc-900 pb-3">
-            <div className="flex items-center gap-2">
-              <Users className="w-5 h-5 text-amber-500" />
-              <h2 className="text-sm font-bold font-mono-terminal uppercase tracking-wider text-white">
-                Usuarios Registrados
-              </h2>
-            </div>
-            <span className="text-[10px] text-zinc-500 font-mono-terminal uppercase tracking-widest">
-              {users.length} {users.length === 1 ? "cuenta" : "cuentas"}
-            </span>
+            <button
+              onClick={() => setActiveTab("pendientes")}
+              className={`flex items-center gap-2 px-3 py-2.5 font-mono-terminal text-xs uppercase tracking-wider transition-all border-b-2 -mb-px ${
+                activeTab === "pendientes"
+                  ? "border-amber-500 text-amber-400"
+                  : "border-transparent text-zinc-500 hover:text-zinc-300"
+              }`}
+            >
+              <Bell className="w-3.5 h-3.5" />
+              <span>Pendientes</span>
+              <span
+                className={`text-[10px] px-1.5 py-0.5 rounded-none font-bold ${
+                  pendingUsers.length > 0
+                    ? "bg-amber-500 text-black"
+                    : "text-zinc-600 bg-zinc-900"
+                }`}
+              >
+                {pendingUsers.length}
+              </span>
+            </button>
           </div>
 
           {isLoading ? (
@@ -391,62 +443,145 @@ export default function UsuariosPage() {
               <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2" />
               Sincronizando...
             </div>
-          ) : users.length === 0 ? (
+          ) : activeTab === "activos" ? (
+            activeUsers.length === 0 ? (
+              <div className="py-10 text-center text-zinc-600 font-mono-terminal text-xs uppercase tracking-widest">
+                No hay usuarios activos.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {activeUsers.map((u) => {
+                  const meta = ROLE_META[u.role];
+                  const isAdmin = currentRole === "admin";
+                  return (
+                    <div
+                      key={u.id}
+                      className="border border-zinc-850 bg-zinc-950 p-3 flex flex-col md:flex-row md:items-center gap-3 hover:border-zinc-700 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-10 h-10 border border-zinc-800 bg-zinc-900 flex items-center justify-center text-amber-500 font-mono-terminal font-bold rounded-none shrink-0">
+                          {u.name.substring(0, 1).toUpperCase()}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm text-white font-mono-terminal font-bold truncate flex items-center gap-2">
+                            {u.name}
+                            <span className="inline-flex items-center gap-1 text-[9px] text-emerald-400 font-mono-terminal uppercase tracking-widest font-normal">
+                              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                              activo
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-zinc-500 font-mono-terminal truncate">
+                            @{u.username}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 border text-[10px] font-mono-terminal uppercase tracking-wider font-bold ${meta.color} rounded-none shrink-0`}
+                      >
+                        {meta.icon}
+                        <span>{meta.label}</span>
+                      </div>
+
+                      {isAdmin ? (
+                        <div className="flex items-center gap-1 shrink-0">
+                          <select
+                            value={u.role}
+                            onChange={(e) => handleChangeRole(u, e.target.value as UserRole)}
+                            className="text-[10px] font-mono-terminal uppercase tracking-wider bg-zinc-900 border border-zinc-800 text-zinc-300 px-2 py-1.5 rounded-none cursor-pointer focus:border-amber-500"
+                            title="Cambiar rol"
+                          >
+                            <option value="admin">Admin</option>
+                            <option value="soporte">Soporte</option>
+                            <option value="taller">Taller</option>
+                          </select>
+                          <button
+                            onClick={() => handleDelete(u)}
+                            className="inline-flex items-center justify-center p-1.5 border border-red-950/40 bg-red-950/10 hover:bg-red-950/30 text-red-400 hover:text-red-300 rounded-none transition-all"
+                            title="Eliminar usuario"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="text-[9px] text-zinc-700 font-mono-terminal uppercase tracking-widest shrink-0">
+                          Solo admin
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )
+          ) : pendingUsers.length === 0 ? (
             <div className="py-10 text-center text-zinc-600 font-mono-terminal text-xs uppercase tracking-widest">
-              No hay usuarios registrados.
+              <Bell className="w-8 h-8 mx-auto mb-2 text-zinc-700" />
+              No hay solicitudes pendientes.
             </div>
           ) : (
             <div className="space-y-2">
-              {users.map((u) => {
+              {pendingUsers.map((u) => {
                 const meta = ROLE_META[u.role];
                 const isAdmin = currentRole === "admin";
                 return (
                   <div
                     key={u.id}
-                    className="border border-zinc-850 bg-zinc-950 p-3 flex flex-col md:flex-row md:items-center gap-3 hover:border-zinc-700 transition-colors"
+                    className="border border-amber-500/30 bg-amber-500/5 p-3 flex flex-col md:flex-row md:items-center gap-3"
                   >
-                    {/* Avatar + datos */}
                     <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <div className="w-10 h-10 border border-zinc-800 bg-zinc-900 flex items-center justify-center text-amber-500 font-mono-terminal font-bold rounded-none shrink-0">
+                      <div className="w-10 h-10 border border-amber-500/40 bg-amber-500/10 flex items-center justify-center text-amber-400 font-mono-terminal font-bold rounded-none shrink-0">
                         {u.name.substring(0, 1).toUpperCase()}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="text-sm text-white font-mono-terminal font-bold truncate">
+                        <div className="text-sm text-white font-mono-terminal font-bold truncate flex items-center gap-2">
                           {u.name}
+                          <span className="inline-flex items-center gap-1 text-[9px] text-amber-400 font-mono-terminal uppercase tracking-widest font-normal">
+                            <Bell className="w-2.5 h-2.5" />
+                            pendiente
+                          </span>
                         </div>
                         <div className="text-[11px] text-zinc-500 font-mono-terminal truncate">
-                          @{u.username}
+                          @{u.username} · pidió: {meta.label}
                         </div>
                       </div>
                     </div>
 
-                    {/* Rol badge */}
-                    <div
-                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 border text-[10px] font-mono-terminal uppercase tracking-wider font-bold ${meta.color} rounded-none shrink-0`}
-                    >
-                      {meta.icon}
-                      <span>{meta.label}</span>
-                    </div>
-
-                    {/* Acciones admin-only */}
                     {isAdmin ? (
                       <div className="flex items-center gap-1 shrink-0">
+                        {/* Selector opcional para cambiar el rol al aprobar */}
                         <select
-                          value={u.role}
-                          onChange={(e) => handleChangeRole(u, e.target.value as UserRole)}
+                          defaultValue={u.role}
+                          onChange={(e) => {
+                            // pequeño hack: actualizamos el rol en el backend
+                            // (no se ve reflejado en la lista hasta recargar)
+                            // Para simplificar, lo manejamos en handleApprove
+                          }}
+                          id={`role-${u.id}`}
                           className="text-[10px] font-mono-terminal uppercase tracking-wider bg-zinc-900 border border-zinc-800 text-zinc-300 px-2 py-1.5 rounded-none cursor-pointer focus:border-amber-500"
-                          title="Cambiar rol"
+                          title="Rol final al aprobar"
                         >
                           <option value="admin">Admin</option>
                           <option value="soporte">Soporte</option>
                           <option value="taller">Taller</option>
                         </select>
                         <button
-                          onClick={() => handleDelete(u)}
-                          className="inline-flex items-center justify-center p-1.5 border border-red-950/40 bg-red-950/10 hover:bg-red-950/30 text-red-400 hover:text-red-300 rounded-none transition-all"
-                          title="Eliminar usuario"
+                          onClick={() => {
+                            const selectEl = document.getElementById(`role-${u.id}`) as HTMLSelectElement | null;
+                            const finalRole = selectEl?.value as UserRole | undefined;
+                            handleApprove(u, finalRole);
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 border border-emerald-700 bg-emerald-600 hover:bg-emerald-700 text-white font-mono-terminal text-[10px] uppercase tracking-wider font-bold transition-all rounded-none"
+                          title="Aprobar solicitud"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Aprobar</span>
+                        </button>
+                        <button
+                          onClick={() => handleReject(u)}
+                          className="inline-flex items-center justify-center p-1.5 border border-red-950/40 bg-red-950/10 hover:bg-red-950/30 text-red-400 hover:text-red-300 rounded-none transition-all"
+                          title="Rechazar solicitud"
+                        >
+                          <X className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     ) : (

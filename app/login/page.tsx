@@ -3,7 +3,8 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { loginUser } from "../actions";
-import { Terminal, ShieldAlert, Key, User } from "lucide-react";
+import { Terminal, ShieldAlert, Key, User, UserPlus } from "lucide-react";
+import Link from "next/link";
 import toast from "react-hot-toast";
 
 export default function LoginPage() {
@@ -121,6 +122,22 @@ export default function LoginPage() {
             )}
           </button>
         </form>
+
+        {/* Separador */}
+        <div className="my-5 flex items-center gap-3">
+          <div className="flex-1 h-px bg-zinc-900" />
+          <span className="text-[9px] text-zinc-700 font-mono-terminal uppercase tracking-widest">o</span>
+          <div className="flex-1 h-px bg-zinc-900" />
+        </div>
+
+        {/* Link a registro */}
+        <Link
+          href="/registro"
+          className="w-full h-10 border border-zinc-800 bg-zinc-950 hover:bg-zinc-900 text-zinc-400 hover:text-amber-500 font-mono-terminal text-xs uppercase tracking-wider transition-all rounded-none cursor-pointer flex items-center justify-center gap-2"
+        >
+          <UserPlus className="w-4 h-4" />
+          <span>Crear Cuenta Nueva</span>
+        </Link>
       </div>
 
       <footer className="text-center text-[9px] text-zinc-700 font-mono-terminal uppercase tracking-widest mt-6">

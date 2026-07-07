@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { logoutUser } from "@/app/actions";
-import { Terminal, LayoutDashboard, Plus, LogOut, RefreshCw, Layers, ClipboardList, Truck, CheckSquare, Menu, X, Users } from "lucide-react";
+import { logoutUser, countPendingUsers } from "@/app/actions";
+import { Terminal, LayoutDashboard, Plus, LogOut, RefreshCw, Layers, ClipboardList, Truck, CheckSquare, Menu, X, Users, Bell } from "lucide-react";
 import toast from "react-hot-toast";
 
 function readRoleCookie(): "admin" | "soporte" | "taller" | null {
@@ -23,10 +23,35 @@ export function Header() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [role, setRole] = useState<"admin" | "soporte" | "taller" | null>(null);
+  const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     setRole(readRoleCookie());
   }, [pathname]);
+
+  // Cargar contador de pendientes (solo si hay rol alto; si no, queda en 0)
+  useEffect(() => {
+    if (!role) {
+      setPendingCount(0);
+      return;
+    }
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const count = await countPendingUsers();
+        if (!cancelled) setPendingCount(count);
+      } catch (e) {
+        // Silenciar: si falla, no mostramos el badge
+      }
+    };
+    load();
+    // Refrescar cada 30 segundos
+    const interval = setInterval(load, 30000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [role, pathname]);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -173,11 +198,16 @@ export function Header() {
               {role && pathname !== "/dashboard/usuarios" && (
                 <button
                   onClick={() => router.push("/dashboard/usuarios")}
-                  className="inline-flex items-center gap-2 px-3 py-2 border border-zinc-850 bg-zinc-950 hover:bg-zinc-900 text-zinc-400 hover:text-amber-500 font-mono-terminal text-xs uppercase tracking-wider transition-all cursor-pointer rounded-none"
+                  className="relative inline-flex items-center gap-2 px-3 py-2 border border-zinc-850 bg-zinc-950 hover:bg-zinc-900 text-zinc-400 hover:text-amber-500 font-mono-terminal text-xs uppercase tracking-wider transition-all cursor-pointer rounded-none"
                   title="Gestión de Usuarios"
                 >
                   <Users className="w-4 h-4" />
                   <span>Usuarios</span>
+                  {pendingCount > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 bg-amber-500 text-black text-[9px] font-bold font-mono-terminal flex items-center justify-center rounded-none border border-amber-600">
+                      {pendingCount > 9 ? "9+" : pendingCount}
+                    </span>
+                  )}
                 </button>
               )}
             </>
@@ -330,10 +360,15 @@ export function Header() {
                     router.push("/dashboard/usuarios");
                     setIsMenuOpen(false);
                   }}
-                  className="w-full inline-flex items-center gap-3 px-3 py-2.5 border border-zinc-850 bg-zinc-950 text-zinc-400 hover:text-amber-500 font-mono-terminal text-xs uppercase tracking-wider transition-all cursor-pointer rounded-none text-left"
+                  className="w-full relative inline-flex items-center gap-3 px-3 py-2.5 border border-zinc-850 bg-zinc-950 text-zinc-400 hover:text-amber-500 font-mono-terminal text-xs uppercase tracking-wider transition-all cursor-pointer rounded-none text-left"
                 >
                   <Users className="w-4 h-4" />
                   <span>Usuarios</span>
+                  {pendingCount > 0 && (
+                    <span className="ml-auto min-w-[20px] h-[18px] px-1.5 bg-amber-500 text-black text-[9px] font-bold font-mono-terminal flex items-center justify-center rounded-none">
+                      {pendingCount > 9 ? "9+" : pendingCount}
+                    </span>
+                  )}
                 </button>
               )}
             </>

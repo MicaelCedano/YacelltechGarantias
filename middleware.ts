@@ -21,7 +21,7 @@ export function middleware(request: NextRequest) {
 
   // 3. Rutas protegidas vs Ruta de autenticación
   const isProtectedRoute = pathname === "/" || pathname.startsWith("/dashboard");
-  const isAuthRoute = pathname === "/login";
+  const isAuthRoute = pathname === "/login" || pathname === "/registro";
 
   // Redirigir al login si intenta acceder a una ruta privada sin token
   if (isProtectedRoute && !token) {
