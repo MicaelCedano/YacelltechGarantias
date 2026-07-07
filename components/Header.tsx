@@ -40,7 +40,7 @@ export function Header() {
       try {
         const count = await countPendingUsers();
         if (!cancelled) setPendingCount(count);
-      } catch (e) {
+      } catch {
         // Silenciar: si falla, no mostramos el badge
       }
     };
