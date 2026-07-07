@@ -9,7 +9,6 @@ import {
   Trash2,
   Shield,
   Wrench,
-  HardHat,
   KeyRound,
   Eye,
   EyeOff,
@@ -41,15 +40,10 @@ const ROLE_META: Record<UserRole, { label: string; color: string; icon: React.Re
     color: "text-red-400 border-red-500/30 bg-red-500/10",
     icon: <Shield className="w-3.5 h-3.5" />,
   },
-  soporte: {
-    label: "Soporte Técnico",
+  encargado: {
+    label: "Encargado",
     color: "text-blue-400 border-blue-500/30 bg-blue-500/10",
     icon: <Wrench className="w-3.5 h-3.5" />,
-  },
-  taller: {
-    label: "Encargado de Taller",
-    color: "text-amber-400 border-amber-500/30 bg-amber-500/10",
-    icon: <HardHat className="w-3.5 h-3.5" />,
   },
 };
 
@@ -67,7 +61,7 @@ export default function UsuariosPage() {
   const [username, setUsername] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<UserRole>("taller");
+  const [role, setRole] = useState<UserRole>("encargado");
   const [showPassword, setShowPassword] = useState(false);
 
   const loadData = async () => {
@@ -112,7 +106,7 @@ export default function UsuariosPage() {
       setUsername("");
       setName("");
       setPassword("");
-      setRole("taller");
+      setRole("encargado");
       await loadData();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Error al crear usuario";
@@ -258,12 +252,11 @@ export default function UsuariosPage() {
         </button>
       </div>
 
-      {/* Banner para no-admin: explica qué pueden y qué no */}
-      {currentRole !== "admin" && (
-        <div className="mb-6 p-3 border border-amber-500/20 bg-amber-500/5 text-amber-300 font-mono-terminal text-[10px] uppercase tracking-wider leading-relaxed">
+      {/* Banner para encargado: explica que el módulo es solo lectura */}
+      {currentRole !== "admin" && currentRole !== null && (
+        <div className="mb-6 p-3 border border-blue-500/20 bg-blue-500/5 text-blue-300 font-mono-terminal text-[10px] uppercase tracking-wider leading-relaxed">
           <Shield className="w-3.5 h-3.5 inline-block mr-1.5 -mt-0.5" />
-          Tu rol actual (<b>{currentRole ? ROLE_META[currentRole].label : ""}</b>) es de
-          <b> solo lectura</b> en este módulo. Solo el administrador puede crear, aprobar o eliminar cuentas.
+          Tu rol actual (<b>Encargado</b>) es de <b>solo lectura</b> en este módulo. Solo el administrador puede crear, aprobar o eliminar cuentas.
         </div>
       )}
 
@@ -491,8 +484,7 @@ export default function UsuariosPage() {
                             title="Cambiar rol"
                           >
                             <option value="admin">Admin</option>
-                            <option value="soporte">Soporte</option>
-                            <option value="taller">Taller</option>
+                            <option value="encargado">Encargado</option>
                           </select>
                           <button
                             onClick={() => handleDelete(u)}
@@ -555,8 +547,7 @@ export default function UsuariosPage() {
                           title="Rol final al aprobar"
                         >
                           <option value="admin">Admin</option>
-                          <option value="soporte">Soporte</option>
-                          <option value="taller">Taller</option>
+                          <option value="encargado">Encargado</option>
                         </select>
                         <button
                           onClick={() => {

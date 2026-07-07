@@ -3,14 +3,17 @@ import path from "path";
 import { nowSDISO } from "./tz-utils";
 
 /**
- * Roles permitidos en el sistema.
- * - admin: control total (incluye borrar / cambiar rol de otros usuarios)
- * - soporte: técnico especializado
- * - taller: encargado de taller
+ * Roles permitidos en el sistema (refactor 2026-07-07).
+ * Antes había 3 roles (admin, soporte, taller). Micael unificó soporte+taller
+ * en un solo rol "encargado" para que todos los del taller tengan los mismos
+ * permisos, y el gating de admin se reserve solo para vos.
+ *
+ * - admin: control total (gestión de usuarios + todo el taller)
+ * - encargado: cualquier persona del taller (todo el taller, sin gestión de usuarios)
  */
-export type UserRole = "admin" | "soporte" | "taller";
+export type UserRole = "admin" | "encargado";
 
-export const USER_ROLES: UserRole[] = ["admin", "soporte", "taller"];
+export const USER_ROLES: UserRole[] = ["admin", "encargado"];
 
 /**
  * Estado de aprobación de una cuenta.

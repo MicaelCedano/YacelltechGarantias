@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { registerUser } from "@/app/actions";
-import { Terminal, ShieldAlert, KeyRound, User, AtSign, UserPlus, ArrowLeft, Shield, Wrench, HardHat, Eye, EyeOff, CheckCircle2 } from "lucide-react";
+import { Terminal, ShieldAlert, KeyRound, User, AtSign, UserPlus, ArrowLeft, Shield, Wrench, Eye, EyeOff, CheckCircle2 } from "lucide-react";
 import toast from "react-hot-toast";
 import type { UserRole } from "@/lib/usersDb";
 
@@ -14,17 +14,11 @@ const ROLE_META: Record<UserRole, { label: string; icon: React.ReactNode; descri
     description: "Control total del sistema",
     color: "border-red-500/30 text-red-300",
   },
-  soporte: {
-    label: "Soporte Técnico",
+  encargado: {
+    label: "Encargado",
     icon: <Wrench className="w-3.5 h-3.5" />,
-    description: "Técnico especializado",
+    description: "Persona del taller (todo el sistema)",
     color: "border-blue-500/30 text-blue-300",
-  },
-  taller: {
-    label: "Encargado de Taller",
-    icon: <HardHat className="w-3.5 h-3.5" />,
-    description: "Encargado de taller",
-    color: "border-amber-500/30 text-amber-300",
   },
 };
 
@@ -34,7 +28,7 @@ export default function RegistroPage() {
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [role, setRole] = useState<UserRole>("taller");
+  const [role, setRole] = useState<UserRole>("encargado");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);

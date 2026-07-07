@@ -6,14 +6,14 @@ import { logoutUser, countPendingUsers } from "@/app/actions";
 import { Terminal, LayoutDashboard, Plus, LogOut, RefreshCw, Layers, ClipboardList, Truck, CheckSquare, Menu, X, Users } from "lucide-react";
 import toast from "react-hot-toast";
 
-function readRoleCookie(): "admin" | "soporte" | "taller" | null {
+function readRoleCookie(): "admin" | "encargado" | null {
   if (typeof document === "undefined") return null;
   const match = document.cookie
     .split("; ")
     .find((row) => row.startsWith("yacelltech_role="));
   if (!match) return null;
   const value = match.split("=")[1];
-  if (value === "admin" || value === "soporte" || value === "taller") return value;
+  if (value === "admin" || value === "encargado") return value;
   return null;
 }
 
@@ -22,7 +22,7 @@ export function Header() {
   const pathname = usePathname();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [role, setRole] = useState<"admin" | "soporte" | "taller" | null>(null);
+  const [role, setRole] = useState<"admin" | "encargado" | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {

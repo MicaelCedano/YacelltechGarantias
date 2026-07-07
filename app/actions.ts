@@ -118,10 +118,7 @@ export async function loginUser(username: string, password: string) {
       if (users.length === 0) {
         const seed = [
           { username: "admin", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Administrador", role: "admin" as const },
-          { username: "soporte", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Soporte Técnico", role: "soporte" as const },
-          { username: "tecnico", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Técnico Especializado", role: "soporte" as const },
-          { username: "taller", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Encargado de Taller", role: "taller" as const },
-          { username: "alejandro", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Alejandro", role: "taller" as const },
+          { username: "encargado", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Encargado", role: "encargado" as const },
         ];
         for (const u of seed) {
           await saveMockUser(u);
@@ -211,7 +208,9 @@ export async function loginUser(username: string, password: string) {
     // también, no solo en mock. Sin esto, getCurrentRole() devolvía null en producción
     // y el módulo de usuarios bloqueaba a todo el mundo.
     // Fuente del rol: preferimos la tabla app_users (cuando exista). Fallback: derivar
-    // del prefijo del username (admin/soporte/tecnico/taller/alejandro → role conocido).
+    // del prefijo del username. Cualquier username que NO sea 'admin' entra
+    // como 'encargado'. Cuando se cree la tabla app_users con el rol real,
+    // este fallback deja de aplicar.
     let resolvedRole: UserRole | null = null;
     let resolvedName: string | null = null;
     try {
@@ -231,18 +230,10 @@ export async function loginUser(username: string, password: string) {
     }
 
     if (!resolvedRole) {
-      // Fallback: derivar rol del username. Esto matchea los 5 seeds base
-      // (admin, soporte, tecnico, taller, alejandro) y deja a cualquier otro
-      // usuario como "taller" por defecto. Cuando se cree la tabla app_users
-      // con el rol real, este fallback deja de aplicar.
-      const KNOWN_ROLES: Record<string, UserRole> = {
-        admin: "admin",
-        soporte: "soporte",
-        tecnico: "soporte",
-        taller: "taller",
-        alejandro: "taller",
-      };
-      resolvedRole = KNOWN_ROLES[normalizedUsername] ?? "taller";
+      // Fallback: derivar rol del username. Cualquier username que NO sea 'admin'
+      // entra como 'encargado' (cualquier persona del taller). Cuando se cree la
+      // tabla app_users con el rol real, este fallback deja de aplicar.
+      resolvedRole = normalizedUsername === "admin" ? "admin" : "encargado";
       resolvedName = username.trim();
     }
 
@@ -305,7 +296,7 @@ export async function getCurrentRole(): Promise<UserRole | null> {
 
 /**
  * Crear un usuario nuevo.
- * Permitido a: admin, soporte, taller (cualquiera logueado con rol alto).
+ * Permitido a: admin (atajo para crear cuentas directas sin aprobación).
  * Persistencia mock-only por ahora (mismo patrón que el resto de la app).
  */
 /**
