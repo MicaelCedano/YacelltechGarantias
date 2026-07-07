@@ -180,8 +180,9 @@ export async function loginUser(username: string, password: string) {
 
     // 2. AUTENTICACIÓN EN MODO REAL CON SUPABASE
     // Mapeo: en Supabase el email se construye como username@yacelltech.com para
-    // mantener compatibilidad con la estructura anterior.
-    const finalEmail = `${username.trim().toLowerCase()}@yacelltech.com`;
+    // mantener compatibilidad con la auth anterior sin tocar la base de usuarios real.
+    const normalizedUsername = username.trim().toLowerCase();
+    const finalEmail = `${normalizedUsername}@yacelltech.com`;
     const { data, error } = await supabase.auth.signInWithPassword({
       email: finalEmail,
       password,
@@ -206,7 +207,61 @@ export async function loginUser(username: string, password: string) {
       });
     }
 
-    return { success: true };
+    // FIX 2026-07-07: setear yacelltech_role y yacelltech_user en el branch Supabase
+    // también, no solo en mock. Sin esto, getCurrentRole() devolvía null en producción
+    // y el módulo de usuarios bloqueaba a todo el mundo.
+    // Fuente del rol: preferimos la tabla app_users (cuando exista). Fallback: derivar
+    // del prefijo del username (admin/soporte/tecnico/taller/alejandro → role conocido).
+    let resolvedRole: UserRole | null = null;
+    let resolvedName: string | null = null;
+    try {
+      const { data: appUser, error: appUserError } = await supabase
+        .from("app_users")
+        .select("role, name, status")
+        .eq("username", normalizedUsername)
+        .single();
+      if (!appUserError && appUser) {
+        if (appUser.status === "activo") {
+          resolvedRole = appUser.role as UserRole;
+          resolvedName = appUser.name as string;
+        }
+      }
+    } catch {
+      // tabla no existe o query falló → fallback al mapeo por prefijo
+    }
+
+    if (!resolvedRole) {
+      // Fallback: derivar rol del username. Esto matchea los 5 seeds base
+      // (admin, soporte, tecnico, taller, alejandro) y deja a cualquier otro
+      // usuario como "taller" por defecto. Cuando se cree la tabla app_users
+      // con el rol real, este fallback deja de aplicar.
+      const KNOWN_ROLES: Record<string, UserRole> = {
+        admin: "admin",
+        soporte: "soporte",
+        tecnico: "soporte",
+        taller: "taller",
+        alejandro: "taller",
+      };
+      resolvedRole = KNOWN_ROLES[normalizedUsername] ?? "taller";
+      resolvedName = username.trim();
+    }
+
+    cookies().set("yacelltech_role", resolvedRole, {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 365 * 24 * 60 * 60,
+      path: "/",
+      sameSite: "lax",
+    });
+    cookies().set("yacelltech_user", resolvedName ?? username.trim(), {
+      httpOnly: false,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 365 * 24 * 60 * 60,
+      path: "/",
+      sameSite: "lax",
+    });
+
+    return { success: true, role: resolvedRole };
   } catch (error) {
     console.error("Error en Server Action loginUser:", error);
     const message = error instanceof Error ? error.message : "Error interno del servidor";
