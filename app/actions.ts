@@ -1,6 +1,6 @@
 "use server";
 
-import { isMockMode, supabase } from "@/lib/supabase";
+import { isMockMode, supabase, getSupabaseAdmin } from "@/lib/supabase";
 import { generateCaseCode } from "@/lib/generateCaseCode";
 import { cookies } from "next/headers";
 import {
@@ -10,11 +10,13 @@ import {
 import {
   USER_ROLES,
   UserRole,
+  AppUser,
   saveMockUser,
   deleteMockUser,
   updateMockUserRole,
   updateMockUserStatus,
   getMockUserByUsername,
+  getMockUsers,
 } from "@/lib/usersDb";
 
 interface WarrantyIntakeInput {
@@ -295,15 +297,12 @@ export async function getCurrentRole(): Promise<UserRole | null> {
 }
 
 /**
- * Crear un usuario nuevo.
- * Permitido a: admin (atajo para crear cuentas directas sin aprobación).
- * Persistencia mock-only por ahora (mismo patrón que el resto de la app).
- */
-/**
  * Crear un usuario directo, sin aprobación (atajo del admin).
  * Permitido SOLO a: admin.
  * Para que un usuario nuevo entre por su cuenta, debe usar `registerUser` y
  * luego el admin lo aprueba con `approveUser`.
+ *
+ * Persistencia: Supabase (app_users) si está configurado, sino mock (users_db.json).
  */
 export async function createUser(input: {
   username: string;
@@ -338,15 +337,21 @@ export async function createUser(input: {
       return { success: false, error: "Rol no válido." };
     }
 
-    // Duplicado
-    const existing = await getMockUserByUsername(username);
+    // Duplicado (chequeo contra el storage que esté activo)
+    const existing = await findUserByUsername(username);
     if (existing) {
       return { success: false, error: "Ya existe un usuario con ese nombre." };
     }
 
     // Creación directa: ya entra como "activo"
-    const created = await saveMockUser({ username, password, name, role: input.role, status: "activo" });
-    return { success: true, user: { ...created, password: undefined } };
+    const created = await createUserInStorage({
+      username,
+      password,
+      name,
+      role: input.role,
+      status: "activo",
+    });
+    return { success: true, user: stripPassword(created) };
   } catch (error) {
     console.error("Error en createUser:", error);
     const message = error instanceof Error ? error.message : "Error interno al crear usuario";
@@ -359,6 +364,8 @@ export async function createUser(input: {
  * Sin gate: cualquiera puede pedir una cuenta. Queda con status "pendiente"
  * hasta que un admin la apruebe con `approveUser`.
  * El login está bloqueado mientras la cuenta esté pendiente.
+ *
+ * Persistencia: Supabase (app_users) si está configurado, sino mock (users_db.json).
  */
 export async function registerUser(input: {
   username: string;
@@ -388,7 +395,7 @@ export async function registerUser(input: {
     }
 
     // Duplicado: si el username ya existe (activo o pendiente), rechazar.
-    const existing = await getMockUserByUsername(username);
+    const existing = await findUserByUsername(username);
     if (existing) {
       return {
         success: false,
@@ -398,8 +405,14 @@ export async function registerUser(input: {
       };
     }
 
-    const created = await saveMockUser({ username, password, name, role: input.role, status: "pendiente" });
-    return { success: true, user: { ...created, password: undefined } };
+    const created = await createUserInStorage({
+      username,
+      password,
+      name,
+      role: input.role,
+      status: "pendiente",
+    });
+    return { success: true, user: stripPassword(created) };
   } catch (error) {
     console.error("Error en registerUser:", error);
     const message = error instanceof Error ? error.message : "Error interno al registrar la solicitud";
@@ -423,11 +436,11 @@ export async function approveUser(userId: string, finalRole?: UserRole) {
 
     // Si pasan finalRole, primero actualizo el rol y después el status.
     if (finalRole && (USER_ROLES as string[]).includes(finalRole)) {
-      await updateMockUserRole(userId, finalRole);
+      await updateUserRoleInStorage(userId, finalRole);
     }
-    const updated = await updateMockUserStatus(userId, "activo");
+    const updated = await updateUserStatusInStorage(userId, "activo");
     return updated
-      ? { success: true, user: { ...updated, password: undefined } }
+      ? { success: true, user: stripPassword(updated) }
       : { success: false, error: "No se pudo aprobar la solicitud." };
   } catch (error) {
     console.error("Error en approveUser:", error);
@@ -449,7 +462,7 @@ export async function rejectUser(userId: string) {
     if (!userId) {
       return { success: false, error: "ID de usuario requerido." };
     }
-    const ok = await deleteMockUser(userId);
+    const ok = await deleteUserInStorage(userId);
     return ok
       ? { success: true }
       : { success: false, error: "No se pudo rechazar la solicitud." };
@@ -467,8 +480,7 @@ export async function rejectUser(userId: string) {
  */
 export async function countPendingUsers(): Promise<number> {
   try {
-    const { getMockUsers } = await import("@/lib/usersDb");
-    const users = await getMockUsers();
+    const users = await listAllUsers();
     return users.filter((u) => u.status === "pendiente").length;
   } catch (error) {
     console.error("Error en countPendingUsers:", error);
@@ -492,8 +504,7 @@ export async function removeUser(userId: string) {
 
     // Protección: no permitir que el admin se borre a sí mismo. El chequeo
     // mínimo viable es: si está borrando a un admin, asegurarse de que no quede 0.
-    const { getMockUsers } = await import("@/lib/usersDb");
-    const all = await getMockUsers();
+    const all = await listAllUsers();
     const target = all.find((u) => u.id === userId);
     if (!target) {
       return { success: false, error: "Usuario no encontrado." };
@@ -506,7 +517,7 @@ export async function removeUser(userId: string) {
       };
     }
 
-    const ok = await deleteMockUser(userId);
+    const ok = await deleteUserInStorage(userId);
     return ok
       ? { success: true }
       : { success: false, error: "No se pudo eliminar el usuario." };
@@ -535,8 +546,7 @@ export async function changeUserRole(userId: string, newRole: UserRole) {
     }
 
     // Si está degradando a un admin, no permitir que quede 0 admin
-    const { getMockUsers } = await import("@/lib/usersDb");
-    const all = await getMockUsers();
+    const all = await listAllUsers();
     const target = all.find((u) => u.id === userId);
     if (!target) {
       return { success: false, error: "Usuario no encontrado." };
@@ -551,15 +561,137 @@ export async function changeUserRole(userId: string, newRole: UserRole) {
       }
     }
 
-    const updated = await updateMockUserRole(userId, newRole);
+    const updated = await updateUserRoleInStorage(userId, newRole);
     return updated
-      ? { success: true, user: { ...updated, password: undefined } }
+      ? { success: true, user: stripPassword(updated) }
       : { success: false, error: "No se pudo actualizar el rol." };
   } catch (error) {
     console.error("Error en changeUserRole:", error);
     const message = error instanceof Error ? error.message : "Error interno al cambiar rol";
     return { success: false, error: message };
   }
+}
+
+// =============================================================
+// Storage helpers — abstracción mock/Supabase (2026-07-07).
+// Todas las server actions de arriba usan estos helpers. Si el modo
+// Supabase está activo y la service role key está configurada, se
+// usa la tabla `app_users`. Si no, se cae al JSON mock.
+// =============================================================
+async function listAllUsers() {
+  if (!isMockMode()) {
+    const admin = getSupabaseAdmin();
+    if (admin) {
+      const { data, error } = await admin
+        .from("app_users")
+        .select("id, username, password, name, role, status, created_at, updated_at")
+        .order("created_at", { ascending: true });
+      if (error) throw new Error(`Supabase listAllUsers: ${error.message}`);
+      return (data || []) as AppUser[];
+    }
+  }
+  return getMockUsers();
+}
+
+async function findUserByUsername(username: string) {
+  if (!isMockMode()) {
+    const admin = getSupabaseAdmin();
+    if (admin) {
+      const { data, error } = await admin
+        .from("app_users")
+        .select("id, username, password, name, role, status, created_at, updated_at")
+        .eq("username", username.toLowerCase())
+        .maybeSingle();
+      if (error) throw new Error(`Supabase findUserByUsername: ${error.message}`);
+      return (data as AppUser) || null;
+    }
+  }
+  return getMockUserByUsername(username);
+}
+
+async function createUserInStorage(input: {
+  username: string;
+  password: string;
+  name: string;
+  role: UserRole;
+  status: "activo" | "pendiente";
+}) {
+  if (!isMockMode()) {
+    const admin = getSupabaseAdmin();
+    if (admin) {
+      const { data, error } = await admin
+        .from("app_users")
+        .insert([
+          {
+            username: input.username.toLowerCase(),
+            password: input.password,
+            name: input.name,
+            role: input.role,
+            status: input.status,
+          },
+        ])
+        .select()
+        .single();
+      if (error) throw new Error(`Supabase createUser: ${error.message}`);
+      return data as AppUser;
+    }
+  }
+  return saveMockUser(input);
+}
+
+async function updateUserRoleInStorage(userId: string, newRole: UserRole) {
+  if (!isMockMode()) {
+    const admin = getSupabaseAdmin();
+    if (admin) {
+      const { data, error } = await admin
+        .from("app_users")
+        .update({ role: newRole })
+        .eq("id", userId)
+        .select()
+        .single();
+      if (error) throw new Error(`Supabase updateUserRole: ${error.message}`);
+      return (data as AppUser) || null;
+    }
+  }
+  return updateMockUserRole(userId, newRole);
+}
+
+async function updateUserStatusInStorage(userId: string, newStatus: "activo" | "pendiente") {
+  if (!isMockMode()) {
+    const admin = getSupabaseAdmin();
+    if (admin) {
+      const { data, error } = await admin
+        .from("app_users")
+        .update({ status: newStatus })
+        .eq("id", userId)
+        .select()
+        .single();
+      if (error) throw new Error(`Supabase updateUserStatus: ${error.message}`);
+      return (data as AppUser) || null;
+    }
+  }
+  return updateMockUserStatus(userId, newStatus);
+}
+
+async function deleteUserInStorage(userId: string) {
+  if (!isMockMode()) {
+    const admin = getSupabaseAdmin();
+    if (admin) {
+      const { error } = await admin.from("app_users").delete().eq("id", userId);
+      if (error) throw new Error(`Supabase deleteUser: ${error.message}`);
+      return true;
+    }
+  }
+  return deleteMockUser(userId);
+}
+
+function stripPassword<T extends { password?: string }>(u: T): Omit<T, "password"> {
+  // No destructuramos (eslint no-unused-vars), construimos un objeto nuevo.
+  const out: Record<string, unknown> = {};
+  for (const k of Object.keys(u)) {
+    if (k !== "password") out[k] = (u as Record<string, unknown>)[k];
+  }
+  return out as Omit<T, "password">;
 }
 
 interface IntakeItem {

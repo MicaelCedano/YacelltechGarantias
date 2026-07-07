@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { isMockMode } from "@/lib/supabase";
+import { isMockMode, getSupabaseAdmin } from "@/lib/supabase";
 import { getMockUsers, USER_ROLES } from "@/lib/usersDb";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +9,7 @@ export const dynamic = "force-dynamic";
  * GET /api/users
  * Devuelve la lista de usuarios (sin password).
  * Gate: solo accesible si hay un rol válido en la cookie.
+ * Modo: lee de `app_users` (Supabase) o `users_db.json` (mock).
  */
 export async function GET() {
   try {
@@ -36,15 +37,33 @@ export async function GET() {
       return NextResponse.json({ success: true, users: safe });
     }
 
-    // Modo Supabase (futuro): devolver desde tabla `app_users` cuando exista.
-    return NextResponse.json(
-      {
-        success: false,
-        error:
-          "Listado de usuarios en Supabase aún no implementado. Configure MOCK_MODE o agregue la tabla app_users.",
-      },
-      { status: 501 }
-    );
+    // Modo Supabase: query a app_users via service role.
+    const admin = getSupabaseAdmin();
+    if (!admin) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "SUPABASE_SERVICE_ROLE_KEY no está configurada. Agregala en Vercel → Settings → Environment Variables.",
+        },
+        { status: 500 }
+      );
+    }
+
+    const { data, error } = await admin
+      .from("app_users")
+      .select("id, username, name, role, status, created_at, updated_at")
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Supabase error en GET /api/users:", error);
+      return NextResponse.json(
+        { success: false, error: `Error al listar usuarios: ${error.message}` },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true, users: data || [] });
   } catch (error) {
     console.error("Error en GET /api/users:", error);
     return NextResponse.json(
