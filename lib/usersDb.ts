@@ -14,7 +14,7 @@ export const USER_ROLES: UserRole[] = ["admin", "soporte", "taller"];
 
 export interface AppUser {
   id: string;
-  email: string;
+  username: string;
   password: string;
   name: string;
   role: UserRole;
@@ -48,19 +48,15 @@ export async function getMockUsers(): Promise<AppUser[]> {
   return readDb();
 }
 
-export async function getMockUserByEmail(email: string): Promise<AppUser | null> {
+export async function getMockUserByUsername(username: string): Promise<AppUser | null> {
   const users = readDb();
-  const normalized = email.trim().toLowerCase();
-  const found = users.find(
-    (u) =>
-      u.email.toLowerCase() === normalized ||
-      u.email.split("@")[0].toLowerCase() === normalized
-  );
+  const normalized = username.trim().toLowerCase();
+  const found = users.find((u) => u.username.toLowerCase() === normalized);
   return found || null;
 }
 
 export async function saveMockUser(input: {
-  email: string;
+  username: string;
   password: string;
   name: string;
   role: UserRole;
@@ -69,7 +65,7 @@ export async function saveMockUser(input: {
   const timestamp = nowSDISO();
   const newUser: AppUser = {
     id: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 11),
-    email: input.email.trim().toLowerCase(),
+    username: input.username.trim().toLowerCase(),
     password: input.password,
     name: input.name.trim(),
     role: input.role,

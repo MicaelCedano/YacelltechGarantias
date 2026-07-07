@@ -13,7 +13,7 @@ import {
   saveMockUser,
   deleteMockUser,
   updateMockUserRole,
-  getMockUserByEmail,
+  getMockUserByUsername,
 } from "@/lib/usersDb";
 
 interface WarrantyIntakeInput {
@@ -100,27 +100,27 @@ export async function createWarrantyCase(formData: WarrantyIntakeInput) {
 }
 
 /**
- * Autentica al usuario (con soporte para el usuario local admin@yacelltech.com / admin).
+ * Autentica al usuario por nombre de usuario + contraseña (mock mode).
+ * Los 5 usuarios base se siembran automáticamente la primera vez.
  */
-export async function loginUser(email: string, password: string) {
+export async function loginUser(username: string, password: string) {
   try {
-    if (!email.trim() || !password.trim()) {
+    if (!username.trim() || !password.trim()) {
       return { success: false, error: "El usuario y la contraseña son obligatorios." };
     }
     // 1. AUTENTICACIÓN EN MODO LOCAL SIMULADO
     if (isMockMode()) {
-      // Semilla inicial: si users_db.json está vacío, sembrar los 5 usuarios base
-      // para no romper el flujo de login existente la primera vez.
+      // Semilla inicial: si users_db.json está vacío, sembrar los 5 usuarios base.
       // Las contraseñas en mock mode son placeholders; ver audit 2026-06-27.
       const { getMockUsers } = await import("@/lib/usersDb");
       let users = await getMockUsers();
       if (users.length === 0) {
         const seed = [
-          { email: "admin@yacelltech.com", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Administrador", role: "admin" as const },
-          { email: "soporte@yacelltech.com", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Soporte Técnico", role: "soporte" as const },
-          { email: "tecnico@yacelltech.com", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Técnico Especializado", role: "soporte" as const },
-          { email: "taller@yacelltech.com", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Encargado de Taller", role: "taller" as const },
-          { email: "alejandro@yacelltech.com", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Alejandro", role: "taller" as const },
+          { username: "admin", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Administrador", role: "admin" as const },
+          { username: "soporte", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Soporte Técnico", role: "soporte" as const },
+          { username: "tecnico", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Técnico Especializado", role: "soporte" as const },
+          { username: "taller", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Encargado de Taller", role: "taller" as const },
+          { username: "alejandro", password: "MOCK_PASSWORD_SET_IN_ENV", name: "Alejandro", role: "taller" as const },
         ];
         for (const u of seed) {
           await saveMockUser(u);
@@ -130,8 +130,7 @@ export async function loginUser(email: string, password: string) {
 
       const foundUser = users.find(
         (u) =>
-          (u.email.toLowerCase() === email.toLowerCase() ||
-           u.email.split("@")[0].toLowerCase() === email.toLowerCase()) &&
+          u.username.toLowerCase() === username.toLowerCase() &&
           u.password === password
       );
 
@@ -169,7 +168,9 @@ export async function loginUser(email: string, password: string) {
     }
 
     // 2. AUTENTICACIÓN EN MODO REAL CON SUPABASE
-    const finalEmail = email.includes("@") ? email.trim() : `${email.trim()}@yacelltech.com`;
+    // Mapeo: en Supabase el email se construye como username@yacelltech.com para
+    // mantener compatibilidad con la estructura anterior.
+    const finalEmail = `${username.trim().toLowerCase()}@yacelltech.com`;
     const { data, error } = await supabase.auth.signInWithPassword({
       email: finalEmail,
       password,
@@ -242,7 +243,7 @@ export async function getCurrentRole(): Promise<UserRole | null> {
  * Persistencia mock-only por ahora (mismo patrón que el resto de la app).
  */
 export async function createUser(input: {
-  email: string;
+  username: string;
   password: string;
   name: string;
   role: UserRole;
@@ -255,11 +256,14 @@ export async function createUser(input: {
     }
 
     // Validaciones de payload
-    const email = input.email.trim().toLowerCase();
+    const username = input.username.trim().toLowerCase();
     const name = input.name.trim();
     const password = input.password;
-    if (!email || !email.includes("@")) {
-      return { success: false, error: "El correo electrónico no es válido." };
+    if (!username || username.length < 2) {
+      return { success: false, error: "El nombre de usuario debe tener al menos 2 caracteres." };
+    }
+    if (!/^[a-z0-9._-]+$/.test(username)) {
+      return { success: false, error: "El usuario solo puede contener letras minúsculas, números, punto, guion y guion bajo." };
     }
     if (!password || password.length < 3) {
       return { success: false, error: "La contraseña debe tener al menos 3 caracteres." };
@@ -272,12 +276,12 @@ export async function createUser(input: {
     }
 
     // Duplicado
-    const existing = await getMockUserByEmail(email);
+    const existing = await getMockUserByUsername(username);
     if (existing) {
-      return { success: false, error: "Ya existe un usuario con ese correo." };
+      return { success: false, error: "Ya existe un usuario con ese nombre." };
     }
 
-    const created = await saveMockUser({ email, password, name, role: input.role });
+    const created = await saveMockUser({ username, password, name, role: input.role });
     return { success: true, user: { ...created, password: undefined } };
   } catch (error) {
     console.error("Error en createUser:", error);
@@ -300,9 +304,8 @@ export async function removeUser(userId: string) {
       return { success: false, error: "ID de usuario requerido." };
     }
 
-    // Protección: no permitir que el admin se borre a sí mismo (sin email de sesión
-    // a mano, comparamos contra el cookie de nombre/email no es viable acá; el
-    // chequeo mínimo es no borrar si queda 0 admin)
+    // Protección: no permitir que el admin se borre a sí mismo. El chequeo
+    // mínimo viable es: si está borrando a un admin, asegurarse de que no quede 0.
     const { getMockUsers } = await import("@/lib/usersDb");
     const all = await getMockUsers();
     const target = all.find((u) => u.id === userId);

@@ -8,14 +8,14 @@ import toast from "react-hot-toast";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!email.trim() || !password.trim()) {
+    if (!username.trim() || !password.trim()) {
       toast.error("Por favor, ingrese el usuario y la contraseña.");
       return;
     }
@@ -24,7 +24,7 @@ export default function LoginPage() {
     const toastId = toast.loading("Autenticando credenciales de acceso...");
 
     try {
-      const response = await loginUser(email, password);
+      const response = await loginUser(username, password);
 
       if (!response.success) {
         throw new Error(response.error || "Acceso denegado.");
@@ -45,7 +45,7 @@ export default function LoginPage() {
   return (
     <main className="flex-1 flex flex-col items-center justify-center p-4 min-h-screen">
       <div className="w-full max-w-md bg-[#121212] border border-zinc-850 p-6 md:p-8 shadow-2xl relative">
-        
+
         {/* Cabecera estilo Consola */}
         <div className="flex items-center gap-3 mb-6 border-b border-zinc-900 pb-4">
           <div className="bg-amber-500 text-black p-2 border border-amber-600 rounded-none">
@@ -62,7 +62,7 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleLogin} className="space-y-4">
-          
+
           {/* Usuario */}
           <div className="flex flex-col">
             <label className="text-xs font-semibold text-zinc-400 font-mono-terminal uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
@@ -73,8 +73,8 @@ export default function LoginPage() {
               type="text"
               required
               placeholder="ej. alejandro o admin"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               className="w-full px-3 py-2.5 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-none focus:border-amber-500"
               disabled={isSubmitting}
             />

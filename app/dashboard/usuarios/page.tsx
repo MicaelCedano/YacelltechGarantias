@@ -14,7 +14,7 @@ import {
   Eye,
   EyeOff,
   RefreshCw,
-  Mail,
+  AtSign,
   User as UserIcon,
 } from "lucide-react";
 import { Header } from "@/components/Header";
@@ -24,7 +24,7 @@ import type { UserRole } from "@/lib/usersDb";
 
 interface UserRow {
   id: string;
-  email: string;
+  username: string;
   name: string;
   role: UserRole;
   created_at: string;
@@ -57,7 +57,7 @@ export default function UsuariosPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // form
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>("taller");
@@ -100,11 +100,11 @@ export default function UsuariosPage() {
     setIsSubmitting(true);
     const toastId = toast.loading("Creando usuario...");
     try {
-      const res = await createUser({ email, password, name, role });
+      const res = await createUser({ username, password, name, role });
       if (!res.success) throw new Error(res.error || "No se pudo crear el usuario.");
       toast.success(`Usuario ${name} creado con rol ${ROLE_META[role].label}.`, { id: toastId });
       // Reset
-      setEmail("");
+      setUsername("");
       setName("");
       setPassword("");
       setRole("taller");
@@ -123,7 +123,7 @@ export default function UsuariosPage() {
       return;
     }
     const ok = window.confirm(
-      `¿Eliminar al usuario ${user.name} (${user.email})? Esta acción no se puede deshacer.`
+      `¿Eliminar al usuario ${user.name} (${user.username})? Esta acción no se puede deshacer.`
     );
     if (!ok) return;
 
@@ -260,18 +260,20 @@ export default function UsuariosPage() {
               />
             </div>
 
-            {/* Email */}
+            {/* Usuario de acceso (sin correo electronico) */}
             <div className="flex flex-col">
               <label className="text-[10px] font-semibold text-zinc-400 font-mono-terminal uppercase tracking-widest mb-1.5 flex items-center gap-1.5">
-                <Mail className="w-3.5 h-3.5 text-zinc-500" />
-                Correo de Acceso
+                <AtSign className="w-3.5 h-3.5 text-zinc-500" />
+                Usuario de Acceso
               </label>
               <input
-                type="email"
+                type="text"
                 required
-                placeholder="usuario@yacelltech.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                minLength={2}
+                pattern="[a-z0-9._\-]+"
+                placeholder="ej. ramon, maria.perez"
+                value={username}
+                onChange={(e) => setUsername(e.target.value.toLowerCase())}
                 className="w-full px-3 py-2 text-sm bg-zinc-950 border border-zinc-800 text-white rounded-none focus:border-amber-500 font-mono-terminal"
                 disabled={isSubmitting}
               />
@@ -413,7 +415,7 @@ export default function UsuariosPage() {
                           {u.name}
                         </div>
                         <div className="text-[11px] text-zinc-500 font-mono-terminal truncate">
-                          {u.email}
+                          @{u.username}
                         </div>
                       </div>
                     </div>
