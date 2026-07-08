@@ -371,7 +371,11 @@ export async function registerUser(input: {
   username: string;
   password: string;
   name: string;
-  role: UserRole;
+  // role ya no viene del cliente: el self-registration siempre entra como
+  // "encargado" (el default). El admin asigna el rol real al aprobar la
+  // solicitud con `approveUser`, o lo edita después con `changeUserRole`.
+  // Mantenemos el campo en la firma por compat, pero lo IGNORAMOS.
+  role?: UserRole;
 }) {
   try {
     // Validaciones de payload
@@ -390,9 +394,6 @@ export async function registerUser(input: {
     if (!name) {
       return { success: false, error: "El nombre es obligatorio." };
     }
-    if (!(USER_ROLES as string[]).includes(input.role)) {
-      return { success: false, error: "Rol no válido." };
-    }
 
     // Duplicado: si el username ya existe (activo o pendiente), rechazar.
     const existing = await findUserByUsername(username);
@@ -405,11 +406,17 @@ export async function registerUser(input: {
       };
     }
 
+    // Rol fijo: "encargado" para todo self-registration. El admin lo cambia
+    // a "admin" después, si corresponde. Esto cierra el vector de
+    // auto-promoción: aunque el cliente mande role:"admin", el server
+    // lo ignora y siempre graba "encargado".
+    const DEFAULT_SELF_REGISTRATION_ROLE: UserRole = "encargado";
+
     const created = await createUserInStorage({
       username,
       password,
       name,
-      role: input.role,
+      role: DEFAULT_SELF_REGISTRATION_ROLE,
       status: "pendiente",
     });
     return { success: true, user: stripPassword(created) };
