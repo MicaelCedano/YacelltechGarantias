@@ -1,6 +1,7 @@
 "use server";
 
 import { isMockMode, supabase, getSupabaseAdmin } from "@/lib/supabase";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { generateCaseCode } from "@/lib/generateCaseCode";
 import { cookies } from "next/headers";
 import {
@@ -626,6 +627,7 @@ async function createUserInStorage(input: {
   if (!isMockMode()) {
     const admin = getSupabaseAdmin();
     if (admin) {
+      // 1. Crear en app_users (rol, nombre, estado)
       const { data, error } = await admin
         .from("app_users")
         .insert([
@@ -640,6 +642,14 @@ async function createUserInStorage(input: {
         .select()
         .single();
       if (error) throw new Error(`Supabase createUser: ${error.message}`);
+
+      // 2. Si el usuario se crea como "activo", también crearlo en Supabase Auth
+      //    para que pueda loguearse con signInWithPassword.
+      //    Si es "pendiente", se crea en Auth solo al aprobar (ver updateUserStatusInStorage).
+      if (input.status === "activo") {
+        await createUserInAuth(admin, input.username.toLowerCase(), input.password, input.name);
+      }
+
       return data as AppUser;
     }
   }
@@ -667,6 +677,21 @@ async function updateUserStatusInStorage(userId: string, newStatus: "activo" | "
   if (!isMockMode()) {
     const admin = getSupabaseAdmin();
     if (admin) {
+      // Cuando se APRUEBA un usuario (pendiente → activo), también hay que
+      // crearlo en Supabase Auth para que signInWithPassword lo reconozca.
+      // Si el usuario ya existe en Auth, createUserInAuth lo detecta y no falla.
+      if (newStatus === "activo") {
+        const { data: currentUser, error: lookupError } = await admin
+          .from("app_users")
+          .select("username, password, name")
+          .eq("id", userId)
+          .single();
+        if (lookupError) throw new Error(`Supabase lookupUser pre-approve: ${lookupError.message}`);
+        if (currentUser) {
+          await createUserInAuth(admin, currentUser.username, currentUser.password, currentUser.name);
+        }
+      }
+
       const { data, error } = await admin
         .from("app_users")
         .update({ status: newStatus })
@@ -684,12 +709,117 @@ async function deleteUserInStorage(userId: string) {
   if (!isMockMode()) {
     const admin = getSupabaseAdmin();
     if (admin) {
+      // Obtener username antes de borrar para también eliminar de Auth
+      const { data: currentUser, error: lookupError } = await admin
+        .from("app_users")
+        .select("username")
+        .eq("id", userId)
+        .single();
+      if (lookupError) throw new Error(`Supabase lookupUser pre-delete: ${lookupError.message}`);
+
       const { error } = await admin.from("app_users").delete().eq("id", userId);
       if (error) throw new Error(`Supabase deleteUser: ${error.message}`);
+
+      // Eliminar también de Supabase Auth
+      if (currentUser) {
+        await deleteUserInAuth(admin, currentUser.username);
+      }
+
       return true;
     }
   }
   return deleteMockUser(userId);
+}
+
+/**
+ * Crea un usuario en Supabase Auth (auth.users) usando el admin client.
+ * El email se deriva como username@yacelltech.com (mismo mapeo que loginUser).
+ * Si el usuario ya existe en Auth (ej. se registró antes pero quedó pendiente
+ * y ahora se aprueba), no lanza error — solo retorna.
+ */
+async function createUserInAuth(
+  admin: SupabaseClient,
+  username: string,
+  password: string,
+  name: string
+) {
+  const email = `${username}@yacelltech.com`;
+  const { error } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { username, name },
+  });
+  if (error) {
+    // "already exists" no es un error en este contexto — significa que ya
+    // se había creado antes (ej. el admin creó en Auth manualmente, o
+    // la cuenta se registró y aprobó dos veces por un bug previo).
+    if (error.message.includes("already exists")) return;
+    throw new Error(`Supabase Auth createUser: ${error.message}`);
+  }
+}
+
+/**
+ * Elimina un usuario de Supabase Auth por username.
+ * Busca el Auth user por email (username@yacelltech.com) y lo borra.
+ * Si no existe en Auth, no falla (es idempotente).
+ */
+async function deleteUserInAuth(admin: SupabaseClient, username: string) {
+  const email = `${username}@yacelltech.com`;
+  const { data: authUsers, error: listError } = await admin.auth.admin.listUsers();
+  if (listError) {
+    console.error("Error listing Auth users for deletion:", listError);
+    return;
+  }
+  const authUser = authUsers.users.find((u) => u.email === email);
+  if (!authUser) return; // no existe en Auth, nada que borrar
+  const { error: deleteError } = await admin.auth.admin.deleteUser(authUser.id);
+  if (deleteError) {
+    console.error("Error deleting Auth user:", deleteError);
+  }
+}
+
+/**
+ * Re-sincroniza un usuario activo con Supabase Auth.
+ * Sirve para corregir usuarios creados antes del fix de Auth (2026-07-19),
+ * que existen en app_users pero no en auth.users.
+ * Sin gate de admin porque solo el admin ve este botón en la UI.
+ */
+export async function resyncAuthUser(userId: string) {
+  try {
+    const currentRole = await getCurrentRole();
+    if (currentRole !== "admin") {
+      return { success: false, error: "Solo el administrador puede re-sincronizar." };
+    }
+    if (!userId) {
+      return { success: false, error: "ID de usuario requerido." };
+    }
+
+    const users = await listAllUsers();
+    const target = users.find((u) => u.id === userId);
+    if (!target) {
+      return { success: false, error: "Usuario no encontrado." };
+    }
+    if (target.status !== "activo") {
+      return { success: false, error: "Solo se puede re-sincronizar usuarios activos." };
+    }
+
+    if (!isMockMode()) {
+      const admin = getSupabaseAdmin();
+      if (!admin) {
+        return { success: false, error: "Supabase admin no disponible. ¿Configuraste SUPABASE_SERVICE_ROLE_KEY?" };
+      }
+      await createUserInAuth(admin, target.username, target.password, target.name);
+      return { success: true, message: `Usuario @${target.username} re-sincronizado con Auth.` };
+    }
+
+    // En modo mock no hay Auth que sincronizar
+    return { success: false, error: "Estás en modo mock. No hay Supabase Auth que re-sincronizar." };
+  } catch (error) {
+    console.error("Error en resyncAuthUser:", error);
+    const message = error instanceof Error ? error.message : "Error interno al re-sincronizar";
+    return { success: false, error: message };
+  }
 }
 
 function stripPassword<T extends { password?: string }>(u: T): Omit<T, "password"> {

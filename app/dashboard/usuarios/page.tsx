@@ -20,7 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { Header } from "@/components/Header";
-import { createUser, removeUser, changeUserRole, approveUser, rejectUser } from "@/app/actions";
+import { createUser, removeUser, changeUserRole, approveUser, rejectUser, resyncAuthUser } from "@/app/actions";
 import { getCurrentRole } from "@/app/actions";
 import type { UserRole, UserStatus } from "@/lib/usersDb";
 
@@ -192,6 +192,22 @@ export default function UsuariosPage() {
       await loadData();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Error al rechazar";
+      toast.error(message, { id: toastId });
+    }
+  };
+
+  const handleResync = async (user: UserRow) => {
+    if (currentRole !== "admin") {
+      toast.error("Solo el administrador puede re-sincronizar.");
+      return;
+    }
+    const toastId = toast.loading(`Re-sincronizando @${user.username} con Auth...`);
+    try {
+      const res = await resyncAuthUser(user.id);
+      if (!res.success) throw new Error(res.error || "No se pudo re-sincronizar.");
+      toast.success(res.message || "Re-sincronizado.", { id: toastId });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Error al re-sincronizar";
       toast.error(message, { id: toastId });
     }
   };
@@ -492,6 +508,13 @@ export default function UsuariosPage() {
                             title="Eliminar usuario"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleResync(u)}
+                            className="inline-flex items-center justify-center p-1.5 border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-500 hover:text-amber-400 rounded-none transition-all"
+                            title="Re-sincronizar con Supabase Auth"
+                          >
+                            <RefreshCw className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       ) : (
