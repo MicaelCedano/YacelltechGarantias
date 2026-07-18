@@ -20,7 +20,7 @@ import {
   X,
 } from "lucide-react";
 import { Header } from "@/components/Header";
-import { createUser, removeUser, changeUserRole, approveUser, rejectUser, resyncAuthUser } from "@/app/actions";
+import { createUser, removeUser, changeUserRole, approveUser, rejectUser, resyncAllAuthUsers } from "@/app/actions";
 import { getCurrentRole } from "@/app/actions";
 import type { UserRole, UserStatus } from "@/lib/usersDb";
 
@@ -196,16 +196,19 @@ export default function UsuariosPage() {
     }
   };
 
-  const handleResync = async (user: UserRow) => {
+  const handleResyncAll = async () => {
     if (currentRole !== "admin") {
       toast.error("Solo el administrador puede re-sincronizar.");
       return;
     }
-    const toastId = toast.loading(`Re-sincronizando @${user.username} con Auth...`);
+    const toastId = toast.loading("Re-sincronizando todos los usuarios con Auth...");
     try {
-      const res = await resyncAuthUser(user.id);
+      const res = await resyncAllAuthUsers();
       if (!res.success) throw new Error(res.error || "No se pudo re-sincronizar.");
-      toast.success(res.message || "Re-sincronizado.", { id: toastId });
+      toast.success(res.message || "Re-sincronización completa.", { id: toastId });
+      if (res.errors && res.errors.length > 0) {
+        console.warn("Errores en re-sincronización batch:", res.errors);
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Error al re-sincronizar";
       toast.error(message, { id: toastId });
@@ -266,6 +269,16 @@ export default function UsuariosPage() {
           <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
           <span>Refrescar</span>
         </button>
+        {currentRole === "admin" && (
+          <button
+            onClick={handleResyncAll}
+            className="inline-flex items-center gap-2 px-3 py-2 border border-zinc-850 bg-zinc-950 hover:bg-zinc-900 text-zinc-400 hover:text-emerald-500 font-mono-terminal text-xs uppercase tracking-wider transition-all cursor-pointer rounded-none"
+            title="Re-sincronizar todos los usuarios con Supabase Auth"
+          >
+            <RefreshCw className="w-4 h-4" />
+            <span>Auth Sync</span>
+          </button>
+        )}
       </div>
 
       {/* Banner para encargado: explica que el módulo es solo lectura */}
@@ -508,13 +521,6 @@ export default function UsuariosPage() {
                             title="Eliminar usuario"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleResync(u)}
-                            className="inline-flex items-center justify-center p-1.5 border border-zinc-800 bg-zinc-900 hover:bg-zinc-800 text-zinc-500 hover:text-amber-400 rounded-none transition-all"
-                            title="Re-sincronizar con Supabase Auth"
-                          >
-                            <RefreshCw className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       ) : (

@@ -822,6 +822,59 @@ export async function resyncAuthUser(userId: string) {
   }
 }
 
+/**
+ * Re-sincroniza TODOS los usuarios activos con Supabase Auth.
+ * Sirve para corregir en lote usuarios creados antes del fix de Auth.
+ */
+export async function resyncAllAuthUsers() {
+  try {
+    const currentRole = await getCurrentRole();
+    if (currentRole !== "admin") {
+      return { success: false, error: "Solo el administrador puede re-sincronizar." };
+    }
+
+    if (isMockMode()) {
+      return { success: false, error: "Estás en modo mock. No hay Supabase Auth que re-sincronizar." };
+    }
+
+    const admin = getSupabaseAdmin();
+    if (!admin) {
+      return { success: false, error: "Supabase admin no disponible. ¿Configuraste SUPABASE_SERVICE_ROLE_KEY?" };
+    }
+
+    const users = await listAllUsers();
+    const activeUsers = users.filter((u) => u.status === "activo");
+
+    let created = 0;
+    let skipped = 0;
+    const errors: string[] = [];
+
+    for (const u of activeUsers) {
+      try {
+        await createUserInAuth(admin, u.username, u.password, u.name);
+        created++;
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Error desconocido";
+        if (msg.includes("already exists")) {
+          skipped++; // ya estaba en Auth, no es error
+        } else {
+          errors.push(`@${u.username}: ${msg}`);
+        }
+      }
+    }
+
+    return {
+      success: true,
+      message: `Re-sincronización completa. Creados: ${created}, ya existían: ${skipped}, errores: ${errors.length}`,
+      errors: errors.length > 0 ? errors : undefined,
+    };
+  } catch (error) {
+    console.error("Error en resyncAllAuthUsers:", error);
+    const message = error instanceof Error ? error.message : "Error interno";
+    return { success: false, error: message };
+  }
+}
+
 function stripPassword<T extends { password?: string }>(u: T): Omit<T, "password"> {
   // No destructuramos (eslint no-unused-vars), construimos un objeto nuevo.
   const out: Record<string, unknown> = {};
