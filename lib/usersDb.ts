@@ -11,9 +11,9 @@ import { nowSDISO } from "./tz-utils";
  * - admin: control total (gestión de usuarios + todo el taller)
  * - encargado: cualquier persona del taller (todo el taller, sin gestión de usuarios)
  */
-export type UserRole = "admin" | "encargado";
+export type UserRole = "admin" | "encargado" | "tecnico";
 
-export const USER_ROLES: UserRole[] = ["admin", "encargado"];
+export const USER_ROLES: UserRole[] = ["admin", "encargado", "tecnico"];
 
 /**
  * Estado de aprobación de una cuenta.

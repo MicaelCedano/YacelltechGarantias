@@ -32,12 +32,24 @@ export function CaseDrawer({ caseData, isOpen, onClose, onStatusUpdated, onCaseD
   const [selectedStatus, setSelectedStatus] = useState<string>("");
   const [isUpdating, setIsUpdating] = useState<boolean>(false);
   const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [role, setRole] = useState<string | null>(null);
 
   // States for editing fields
   const [editClientName, setEditClientName] = useState<string>("");
   const [editModel, setEditModel] = useState<string>("");
   const [editImei, setEditImei] = useState<string>("");
   const [editProblem, setEditProblem] = useState<string>("");
+
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      const match = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("yacelltech_role="));
+      if (match) {
+        setRole(match.split("=")[1] || null);
+      }
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (caseData) {
@@ -312,10 +324,10 @@ export function CaseDrawer({ caseData, isOpen, onClose, onStatusUpdated, onCaseD
             </h2>
           </div>
           <div className="flex items-center gap-2">
-            {!isEditing && (
+            {!isEditing && role !== "tecnico" && (
               <button
                 onClick={() => setIsEditing(true)}
-                className="px-2.5 py-1 text-[10px] tracking-wider font-mono-terminal uppercase border border-zinc-800 bg-zinc-950 text-zinc-400 hover:text-amber-500 hover:border-amber-500 transition-all cursor-pointer rounded-none"
+                className="px-2.5 py-1 text-[10px] tracking-wider font-mono-terminal uppercase border border-zinc-880 bg-zinc-950 text-zinc-400 hover:text-amber-500 hover:border-amber-500 transition-all cursor-pointer rounded-none"
               >
                 Editar
               </button>
@@ -341,26 +353,28 @@ export function CaseDrawer({ caseData, isOpen, onClose, onStatusUpdated, onCaseD
               <div className="flex items-center justify-between gap-3">
                 <StatusBadge status={selectedStatus} />
                 
-                <div className="relative flex items-center">
-                  <select
-                    value={selectedStatus}
-                    onChange={handleStatusChange}
-                    disabled={isUpdating}
-                    className="px-3 py-1.5 text-xs bg-zinc-950 border border-zinc-850 text-zinc-300 font-mono-terminal uppercase rounded-none focus:border-amber-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed pr-7"
-                  >
-                    <option value="Recibido">Recibido</option>
-                    <option value="En reparación">En reparación</option>
-                    <option value="Recibido del técnico">Recibido del técnico</option>
-                    <option value="Enviado al suplidor">Enviado al suplidor</option>
-                    <option value="Recibido del suplidor">Recibido del suplidor</option>
-                    <option value="Entregado">Entregado</option>
-                  </select>
-                  {isUpdating && (
-                    <span className="absolute right-2 pointer-events-none">
-                      <RefreshCw className="w-3.5 h-3.5 text-amber-500 animate-spin" />
-                    </span>
-                  )}
-                </div>
+                {role !== "tecnico" && (
+                  <div className="relative flex items-center">
+                    <select
+                      value={selectedStatus}
+                      onChange={handleStatusChange}
+                      disabled={isUpdating}
+                      className="px-3 py-1.5 text-xs bg-zinc-950 border border-zinc-850 text-zinc-300 font-mono-terminal uppercase rounded-none focus:border-amber-500 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed pr-7"
+                    >
+                      <option value="Recibido">Recibido</option>
+                      <option value="En reparación">En reparación</option>
+                      <option value="Recibido del técnico">Recibido del técnico</option>
+                      <option value="Enviado al suplidor">Enviado al suplidor</option>
+                      <option value="Recibido del suplidor">Recibido del suplidor</option>
+                      <option value="Entregado">Entregado</option>
+                    </select>
+                    {isUpdating && (
+                      <span className="absolute right-2 pointer-events-none">
+                        <RefreshCw className="w-3.5 h-3.5 text-amber-500 animate-spin" />
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -505,23 +519,27 @@ export function CaseDrawer({ caseData, isOpen, onClose, onStatusUpdated, onCaseD
                   <ExternalLink className="w-3.5 h-3.5" />
                 </Link>
               ) : (
-                <button
-                  onClick={handleDeliverAndPrint}
-                  disabled={isUpdating}
-                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-800 disabled:text-zinc-500 text-white font-bold text-xs font-mono-terminal uppercase transition-all tracking-wider text-center cursor-pointer disabled:cursor-not-allowed"
-                >
-                  <span>Entregar y Generar Conduce</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </button>
+                role !== "tecnico" && (
+                  <button
+                    onClick={handleDeliverAndPrint}
+                    disabled={isUpdating}
+                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-800 disabled:text-zinc-500 text-white font-bold text-xs font-mono-terminal uppercase transition-all tracking-wider text-center cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    <span>Entregar y Generar Conduce</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </button>
+                )
               )}
 
-              <button
-                onClick={handleDeleteCase}
-                disabled={isUpdating}
-                className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 mt-2 bg-red-950/20 hover:bg-[#e30613] border border-[#e30613]/30 hover:border-[#e30613] text-[#e30613] hover:text-white text-xs font-mono-terminal uppercase transition-all tracking-wider text-center cursor-pointer rounded-none"
-              >
-                Eliminar Garantía
-              </button>
+              {role !== "tecnico" && (
+                <button
+                  onClick={handleDeleteCase}
+                  disabled={isUpdating}
+                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 mt-2 bg-red-950/20 hover:bg-[#e30613] border border-[#e30613]/30 hover:border-[#e30613] text-[#e30613] hover:text-white text-xs font-mono-terminal uppercase transition-all tracking-wider text-center cursor-pointer rounded-none"
+                >
+                  Eliminar Garantía
+                </button>
+              )}
             </>
           )}
         </div>

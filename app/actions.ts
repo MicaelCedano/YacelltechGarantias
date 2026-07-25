@@ -31,6 +31,11 @@ interface WarrantyIntakeInput {
 
 export async function createWarrantyCase(formData: WarrantyIntakeInput) {
   try {
+    const currentRole = await getCurrentRole();
+    if (currentRole === "tecnico") {
+      return { success: false, error: "El rol técnico no tiene permisos para crear garantías." };
+    }
+
     // Validaciones básicas de servidor
     if (!formData.imei || formData.imei.length !== 15 || !/^\d+$/.test(formData.imei)) {
       return { success: false, error: "El IMEI debe tener exactamente 15 dígitos numéricos." };
@@ -899,6 +904,11 @@ interface IntakeInput {
 
 export async function createWarrantyCases(formData: IntakeInput) {
   try {
+    const currentRole = await getCurrentRole();
+    if (currentRole === "tecnico") {
+      return { success: false, error: "El rol técnico no tiene permisos para registrar garantías." };
+    }
+
     const { client_name, entry_date, status, devices } = formData;
 
     if (!client_name.trim()) {

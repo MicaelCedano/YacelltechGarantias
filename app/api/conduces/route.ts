@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { isMockMode, supabase } from "@/lib/supabase";
 import { getMockConduces, saveMockConduce } from "@/lib/mockDb";
 import { getTodayDateStr } from "@/lib/tz-utils";
@@ -37,6 +38,14 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const role = cookies().get("yacelltech_role")?.value;
+  if (role === "tecnico") {
+    return NextResponse.json(
+      { error: "El rol técnico no tiene permisos para crear conduces." },
+      { status: 403 }
+    );
+  }
+
   try {
     const body = await request.json();
     const { client_name, case_codes, is_supplier, is_tech } = body;

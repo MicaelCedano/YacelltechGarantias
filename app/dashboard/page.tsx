@@ -14,6 +14,18 @@ export default function DashboardPage() {
   // Data States
   const [cases, setCases] = useState<WarrantyCase[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [role, setRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      const match = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("yacelltech_role="));
+      if (match) {
+        setRole(match.split("=")[1] || null);
+      }
+    }
+  }, []);
 
   // Filters State
   const [searchQuery, setSearchQuery] = useState("");
@@ -434,13 +446,15 @@ export default function DashboardPage() {
                             </button>
 
                             {item.status !== "Entregado" ? (
-                              <button
-                                onClick={(e) => handleDeliverQuick(item, e)}
-                                className="p-1.5 border border-zinc-800 bg-zinc-950 text-emerald-500 hover:text-white hover:bg-emerald-600 hover:border-emerald-600 transition-colors inline-flex items-center gap-1 cursor-pointer"
-                                title="Entregar equipo y generar conduce"
-                              >
-                                <Check className="w-3.5 h-3.5" />
-                              </button>
+                              role !== "tecnico" && (
+                                <button
+                                  onClick={(e) => handleDeliverQuick(item, e)}
+                                  className="p-1.5 border border-zinc-800 bg-zinc-950 text-emerald-500 hover:text-white hover:bg-emerald-600 hover:border-emerald-600 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                                  title="Entregar equipo y generar conduce"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                </button>
+                              )
                             ) : (
                               <button
                                 onClick={(e) => {
@@ -551,13 +565,15 @@ export default function DashboardPage() {
                       </button>
 
                       {item.status !== "Entregado" ? (
-                        <button
-                          onClick={(e) => handleDeliverQuick(item, e)}
-                          className="flex-1 py-1.5 border border-zinc-800 bg-zinc-950 text-emerald-500 hover:text-white hover:bg-emerald-600 hover:border-emerald-600 transition-colors inline-flex items-center justify-center gap-1.5 cursor-pointer text-[10px] font-mono-terminal uppercase tracking-wider font-bold"
-                        >
-                          <Check className="w-3.5 h-3.5" />
-                          <span>Entregar</span>
-                        </button>
+                        role !== "tecnico" && (
+                          <button
+                            onClick={(e) => handleDeliverQuick(item, e)}
+                            className="flex-1 py-1.5 border border-zinc-800 bg-zinc-950 text-emerald-500 hover:text-white hover:bg-emerald-600 hover:border-emerald-600 transition-colors inline-flex items-center justify-center gap-1.5 cursor-pointer text-[10px] font-mono-terminal uppercase tracking-wider font-bold"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                            <span>Entregar</span>
+                          </button>
+                        )
                       ) : (
                         <button
                           onClick={(e) => {

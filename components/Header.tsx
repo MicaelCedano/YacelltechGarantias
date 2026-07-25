@@ -6,14 +6,16 @@ import { logoutUser, countPendingUsers } from "@/app/actions";
 import { Terminal, LayoutDashboard, Plus, LogOut, RefreshCw, Layers, ClipboardList, Truck, CheckSquare, Menu, X, Users } from "lucide-react";
 import toast from "react-hot-toast";
 
-function readRoleCookie(): "admin" | "encargado" | null {
+function readRoleCookie(): "admin" | "encargado" | "tecnico" | null {
   if (typeof document === "undefined") return null;
   const match = document.cookie
     .split("; ")
     .find((row) => row.startsWith("yacelltech_role="));
   if (!match) return null;
   const value = match.split("=")[1];
-  if (value === "admin" || value === "encargado") return value;
+  if (value === "admin" || value === "encargado" || value === "tecnico") {
+    return value as "admin" | "encargado" | "tecnico";
+  }
   return null;
 }
 
@@ -22,7 +24,7 @@ export function Header() {
   const pathname = usePathname();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [role, setRole] = useState<"admin" | "encargado" | null>(null);
+  const [role, setRole] = useState<"admin" | "encargado" | "tecnico" | null>(null);
   const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
@@ -141,7 +143,7 @@ export function Header() {
                   <span>Historial Conduces</span>
                 </button>
               )}
-              {pathname !== "/dashboard/despacho" && (
+              {role !== "tecnico" && pathname !== "/dashboard/despacho" && (
                 <button
                   onClick={() => router.push("/dashboard/despacho")}
                   className="inline-flex items-center gap-2 px-3 py-2 border border-zinc-850 bg-zinc-950 hover:bg-zinc-900 text-zinc-400 hover:text-amber-500 font-mono-terminal text-xs uppercase tracking-wider transition-all cursor-pointer rounded-none"
@@ -150,7 +152,7 @@ export function Header() {
                   <span>Despacho</span>
                 </button>
               )}
-              {pathname !== "/dashboard/entrega-tecnico" && (
+              {role !== "tecnico" && pathname !== "/dashboard/entrega-tecnico" && (
                 <button
                   onClick={() => router.push("/dashboard/entrega-tecnico")}
                   className="inline-flex items-center gap-2 px-3 py-2 border border-zinc-850 bg-zinc-950 hover:bg-zinc-900 text-zinc-400 hover:text-amber-500 font-mono-terminal text-xs uppercase tracking-wider transition-all cursor-pointer rounded-none"
@@ -159,7 +161,7 @@ export function Header() {
                   <span>Entrega Técnico</span>
                 </button>
               )}
-              {pathname !== "/dashboard/recepcion-tecnico" && (
+              {role !== "tecnico" && pathname !== "/dashboard/recepcion-tecnico" && (
                 <button
                   onClick={() => router.push("/dashboard/recepcion-tecnico")}
                   className="inline-flex items-center gap-2 px-3 py-2 border border-zinc-850 bg-zinc-950 hover:bg-zinc-900 text-zinc-400 hover:text-emerald-500 font-mono-terminal text-xs uppercase tracking-wider transition-all cursor-pointer rounded-none"
@@ -168,7 +170,7 @@ export function Header() {
                   <span>Recibo Técnico</span>
                 </button>
               )}
-              {pathname !== "/dashboard/envio-suplidor" && (
+              {role !== "tecnico" && pathname !== "/dashboard/envio-suplidor" && (
                 <button
                   onClick={() => router.push("/dashboard/envio-suplidor")}
                   className="inline-flex items-center gap-2 px-3 py-2 border border-zinc-850 bg-zinc-950 hover:bg-zinc-900 text-zinc-400 hover:text-blue-500 font-mono-terminal text-xs uppercase tracking-wider transition-all cursor-pointer rounded-none"
@@ -177,7 +179,7 @@ export function Header() {
                   <span>Envío Marca</span>
                 </button>
               )}
-              {pathname !== "/dashboard/recepcion-suplidor" && (
+              {role !== "tecnico" && pathname !== "/dashboard/recepcion-suplidor" && (
                 <button
                   onClick={() => router.push("/dashboard/recepcion-suplidor")}
                   className="inline-flex items-center gap-2 px-3 py-2 border border-zinc-850 bg-zinc-950 hover:bg-zinc-900 text-zinc-400 hover:text-purple-500 font-mono-terminal text-xs uppercase tracking-wider transition-all cursor-pointer rounded-none"
@@ -186,7 +188,7 @@ export function Header() {
                   <span>Recibo Marca</span>
                 </button>
               )}
-              {pathname !== "/dashboard/ingreso" && (
+              {role !== "tecnico" && pathname !== "/dashboard/ingreso" && (
                 <button
                   onClick={() => router.push("/dashboard/ingreso")}
                   className="inline-flex items-center gap-2 px-3 py-2 bg-amber-500 hover:bg-amber-600 text-black font-mono-terminal text-xs uppercase tracking-wider font-bold transition-all rounded-none cursor-pointer"
@@ -195,7 +197,7 @@ export function Header() {
                   <span>Ingresar Equipos</span>
                 </button>
               )}
-              {role && pathname !== "/dashboard/usuarios" && (
+              {role && role !== "tecnico" && pathname !== "/dashboard/usuarios" && (
                 <button
                   onClick={() => router.push("/dashboard/usuarios")}
                   className="relative inline-flex items-center gap-2 px-3 py-2 border border-zinc-850 bg-zinc-950 hover:bg-zinc-900 text-zinc-400 hover:text-amber-500 font-mono-terminal text-xs uppercase tracking-wider transition-all cursor-pointer rounded-none"
@@ -282,7 +284,7 @@ export function Header() {
                   <span>Historial Conduces</span>
                 </button>
               )}
-              {pathname !== "/dashboard/despacho" && (
+              {role !== "tecnico" && pathname !== "/dashboard/despacho" && (
                 <button
                   onClick={() => {
                     router.push("/dashboard/despacho");
@@ -294,7 +296,7 @@ export function Header() {
                   <span>Despacho</span>
                 </button>
               )}
-              {pathname !== "/dashboard/entrega-tecnico" && (
+              {role !== "tecnico" && pathname !== "/dashboard/entrega-tecnico" && (
                 <button
                   onClick={() => {
                     router.push("/dashboard/entrega-tecnico");
@@ -306,7 +308,7 @@ export function Header() {
                   <span>Entrega Técnico</span>
                 </button>
               )}
-              {pathname !== "/dashboard/recepcion-tecnico" && (
+              {role !== "tecnico" && pathname !== "/dashboard/recepcion-tecnico" && (
                 <button
                   onClick={() => {
                     router.push("/dashboard/recepcion-tecnico");
@@ -318,7 +320,7 @@ export function Header() {
                   <span>Recibo Técnico</span>
                 </button>
               )}
-              {pathname !== "/dashboard/envio-suplidor" && (
+              {role !== "tecnico" && pathname !== "/dashboard/envio-suplidor" && (
                 <button
                   onClick={() => {
                     router.push("/dashboard/envio-suplidor");
@@ -330,7 +332,7 @@ export function Header() {
                   <span>Envío Marca</span>
                 </button>
               )}
-              {pathname !== "/dashboard/recepcion-suplidor" && (
+              {role !== "tecnico" && pathname !== "/dashboard/recepcion-suplidor" && (
                 <button
                   onClick={() => {
                     router.push("/dashboard/recepcion-suplidor");
@@ -342,7 +344,7 @@ export function Header() {
                   <span>Recibo Marca</span>
                 </button>
               )}
-              {pathname !== "/dashboard/ingreso" && (
+              {role !== "tecnico" && pathname !== "/dashboard/ingreso" && (
                 <button
                   onClick={() => {
                     router.push("/dashboard/ingreso");
@@ -354,7 +356,7 @@ export function Header() {
                   <span>Ingresar Equipos</span>
                 </button>
               )}
-              {role && pathname !== "/dashboard/usuarios" && (
+              {role && role !== "tecnico" && pathname !== "/dashboard/usuarios" && (
                 <button
                   onClick={() => {
                     router.push("/dashboard/usuarios");

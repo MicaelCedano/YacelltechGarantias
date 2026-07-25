@@ -45,6 +45,11 @@ const ROLE_META: Record<UserRole, { label: string; color: string; icon: React.Re
     color: "text-blue-400 border-blue-500/30 bg-blue-500/10",
     icon: <Wrench className="w-3.5 h-3.5" />,
   },
+  tecnico: {
+    label: "Técnico",
+    color: "text-green-400 border-green-500/30 bg-green-500/10",
+    icon: <Wrench className="w-3.5 h-3.5" />,
+  },
 };
 
 type Tab = "activos" | "pendientes";
@@ -70,8 +75,9 @@ export default function UsuariosPage() {
       const roleResp = await getCurrentRole();
       setCurrentRole(roleResp);
 
-      if (!roleResp) {
+      if (!roleResp || roleResp === "tecnico") {
         toast.error("No tienes permisos para acceder a este módulo.");
+        router.push("/dashboard");
         return;
       }
 
@@ -514,6 +520,7 @@ export default function UsuariosPage() {
                           >
                             <option value="admin">Admin</option>
                             <option value="encargado">Encargado</option>
+                            <option value="tecnico">Técnico</option>
                           </select>
                           <button
                             onClick={() => handleDelete(u)}
@@ -577,6 +584,7 @@ export default function UsuariosPage() {
                         >
                           <option value="admin">Admin</option>
                           <option value="encargado">Encargado</option>
+                          <option value="tecnico">Técnico</option>
                         </select>
                         <button
                           onClick={() => {

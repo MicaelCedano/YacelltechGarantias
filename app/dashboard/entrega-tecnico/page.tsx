@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { 
   ArrowLeft, Smartphone, Trash2, 
@@ -14,6 +15,20 @@ const COMMON_TECHS = [
 ];
 
 export default function EntregaTecnicoPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      const match = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("yacelltech_role="));
+      const role = match ? match.split("=")[1] : null;
+      if (role === "tecnico") {
+        toast.error("El rol técnico no tiene acceso a este módulo.");
+        router.push("/dashboard");
+      }
+    }
+  }, [router]);
   // Data States
   const [allCases, setAllCases] = useState<WarrantyCase[]>([]);
   const [isLoading, setIsLoading] = useState(true);

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { isMockMode, supabase } from "@/lib/supabase";
 import { updateMockCaseFields, deleteMockCase } from "@/lib/mockDb";
 import { nowSDISO } from "@/lib/tz-utils";
@@ -17,6 +18,13 @@ export async function PATCH(
   { params }: { params: { caseCode: string } }
 ) {
   const caseCode = params.caseCode;
+  const role = cookies().get("yacelltech_role")?.value;
+  if (role === "tecnico") {
+    return NextResponse.json(
+      { error: "El rol técnico no tiene permisos para modificar garantías." },
+      { status: 403 }
+    );
+  }
 
   try {
     const body = await request.json();
@@ -115,6 +123,13 @@ export async function DELETE(
   { params }: { params: { caseCode: string } }
 ) {
   const caseCode = params.caseCode;
+  const role = cookies().get("yacelltech_role")?.value;
+  if (role === "tecnico") {
+    return NextResponse.json(
+      { error: "El rol técnico no tiene permisos para eliminar garantías." },
+      { status: 403 }
+    );
+  }
 
   try {
     // 1. MODO LOCAL SIMULADO
