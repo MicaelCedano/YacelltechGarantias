@@ -31,6 +31,7 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
 
   // UI Interactive States
   const [selectedCase, setSelectedCase] = useState<WarrantyCase | null>(null);
@@ -170,8 +171,13 @@ export default function DashboardPage() {
   // Filtrado y ordenado de casos
   const filteredCases = cases
     .filter((item) => {
-      // Solo mostrar pendientes (No entregados) en el dashboard
-      if (item.status === "Entregado") return false;
+      // Si hay un estado seleccionado por filtro, filtramos por él (incluyendo "Entregado").
+      // Si no hay ninguno seleccionado, mostramos solo los pendientes (excluyendo "Entregado").
+      if (selectedStatus) {
+        if (item.status !== selectedStatus) return false;
+      } else {
+        if (item.status === "Entregado") return false;
+      }
 
       // 1. Filtro de búsqueda (IMEI, Modelo, Cliente)
       const matchesSearch =
@@ -218,28 +224,99 @@ export default function DashboardPage() {
 
       {/* Panel de Estadísticas Fijas */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-        <div className="p-4 bg-zinc-900 border border-zinc-850 border-l-2 border-l-teal-500">
-          <span className="text-[10px] text-zinc-400 font-mono-terminal uppercase block mb-1">Recibidos (Nuevos)</span>
+        {/* Recibidos */}
+        <div 
+          onClick={() => setSelectedStatus(selectedStatus === "Recibido" ? null : "Recibido")}
+          className={`p-4 transition-all duration-200 cursor-pointer select-none border border-zinc-850 border-l-2 hover:scale-[1.02] active:scale-[0.98] ${
+            selectedStatus === "Recibido"
+              ? "bg-teal-950/30 border-teal-500/70 border-l-teal-400 shadow-[0_0_15px_rgba(20,184,166,0.15)]"
+              : "bg-zinc-900 hover:bg-zinc-850 border-l-teal-500"
+          }`}
+        >
+          <div className="flex justify-between items-start">
+            <span className="text-[10px] text-zinc-400 font-mono-terminal uppercase block mb-1">Recibidos (Nuevos)</span>
+            {selectedStatus === "Recibido" && <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse"></span>}
+          </div>
           <span className="text-xl font-mono-terminal font-bold text-teal-400">{stats.recibido}</span>
         </div>
-        <div className="p-4 bg-zinc-900 border border-zinc-850 border-l-2 border-l-amber-500">
-          <span className="text-[10px] text-zinc-400 font-mono-terminal uppercase block mb-1">En Taller (Téc)</span>
+
+        {/* En Taller */}
+        <div 
+          onClick={() => setSelectedStatus(selectedStatus === "En reparación" ? null : "En reparación")}
+          className={`p-4 transition-all duration-200 cursor-pointer select-none border border-zinc-850 border-l-2 hover:scale-[1.02] active:scale-[0.98] ${
+            selectedStatus === "En reparación"
+              ? "bg-amber-950/30 border-amber-500/70 border-l-amber-400 shadow-[0_0_15px_rgba(245,158,11,0.15)]"
+              : "bg-zinc-900 hover:bg-zinc-850 border-l-amber-500"
+          }`}
+        >
+          <div className="flex justify-between items-start">
+            <span className="text-[10px] text-zinc-400 font-mono-terminal uppercase block mb-1">En Taller (Téc)</span>
+            {selectedStatus === "En reparación" && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>}
+          </div>
           <span className="text-xl font-mono-terminal font-bold text-amber-500">{stats.reparacion}</span>
         </div>
-        <div className="p-4 bg-zinc-900 border border-zinc-850 border-l-2 border-l-emerald-500">
-          <span className="text-[10px] text-zinc-400 font-mono-terminal uppercase block mb-1">Recibidos de Téc</span>
+
+        {/* Recibidos de Téc */}
+        <div 
+          onClick={() => setSelectedStatus(selectedStatus === "Recibido del técnico" ? null : "Recibido del técnico")}
+          className={`p-4 transition-all duration-200 cursor-pointer select-none border border-zinc-850 border-l-2 hover:scale-[1.02] active:scale-[0.98] ${
+            selectedStatus === "Recibido del técnico"
+              ? "bg-emerald-950/30 border-emerald-500/70 border-l-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.15)]"
+              : "bg-zinc-900 hover:bg-zinc-850 border-l-emerald-500"
+          }`}
+        >
+          <div className="flex justify-between items-start">
+            <span className="text-[10px] text-zinc-400 font-mono-terminal uppercase block mb-1">Recibidos de Téc</span>
+            {selectedStatus === "Recibido del técnico" && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>}
+          </div>
           <span className="text-xl font-mono-terminal font-bold text-emerald-400">{stats.recibidoTecnico}</span>
         </div>
-        <div className="p-4 bg-zinc-900 border border-zinc-850 border-l-2 border-l-blue-500">
-          <span className="text-[10px] text-zinc-400 font-mono-terminal uppercase block mb-1">En Marca (Suplidor)</span>
+
+        {/* En Marca (Suplidor) */}
+        <div 
+          onClick={() => setSelectedStatus(selectedStatus === "Enviado al suplidor" ? null : "Enviado al suplidor")}
+          className={`p-4 transition-all duration-200 cursor-pointer select-none border border-zinc-850 border-l-2 hover:scale-[1.02] active:scale-[0.98] ${
+            selectedStatus === "Enviado al suplidor"
+              ? "bg-blue-950/30 border-blue-500/70 border-l-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.15)]"
+              : "bg-zinc-900 hover:bg-zinc-850 border-l-blue-500"
+          }`}
+        >
+          <div className="flex justify-between items-start">
+            <span className="text-[10px] text-zinc-400 font-mono-terminal uppercase block mb-1">En Marca (Suplidor)</span>
+            {selectedStatus === "Enviado al suplidor" && <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>}
+          </div>
           <span className="text-xl font-mono-terminal font-bold text-blue-500">{stats.enSuplidor}</span>
         </div>
-        <div className="p-4 bg-zinc-900 border border-zinc-850 border-l-2 border-l-purple-500">
-          <span className="text-[10px] text-zinc-400 font-mono-terminal uppercase block mb-1">Recibidos de Marca</span>
+
+        {/* Recibidos de Marca */}
+        <div 
+          onClick={() => setSelectedStatus(selectedStatus === "Recibido del suplidor" ? null : "Recibido del suplidor")}
+          className={`p-4 transition-all duration-200 cursor-pointer select-none border border-zinc-850 border-l-2 hover:scale-[1.02] active:scale-[0.98] ${
+            selectedStatus === "Recibido del suplidor"
+              ? "bg-purple-950/30 border-purple-500/70 border-l-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.15)]"
+              : "bg-zinc-900 hover:bg-zinc-850 border-l-purple-500"
+          }`}
+        >
+          <div className="flex justify-between items-start">
+            <span className="text-[10px] text-zinc-400 font-mono-terminal uppercase block mb-1">Recibidos de Marca</span>
+            {selectedStatus === "Recibido del suplidor" && <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse"></span>}
+          </div>
           <span className="text-xl font-mono-terminal font-bold text-purple-500">{stats.recibidoSuplidor}</span>
         </div>
-        <div className="p-4 bg-[#161616] border border-zinc-850 border-l-2 border-l-zinc-650">
-          <span className="text-[10px] text-zinc-400 font-mono-terminal uppercase block mb-1">Entregados Clientes</span>
+
+        {/* Entregados Clientes */}
+        <div 
+          onClick={() => setSelectedStatus(selectedStatus === "Entregado" ? null : "Entregado")}
+          className={`p-4 transition-all duration-200 cursor-pointer select-none border border-zinc-850 border-l-2 hover:scale-[1.02] active:scale-[0.98] ${
+            selectedStatus === "Entregado"
+              ? "bg-zinc-800 border-zinc-650 border-l-zinc-400 shadow-[0_0_15px_rgba(228,228,231,0.15)]"
+              : "bg-[#161616] hover:bg-zinc-900 border-l-zinc-650"
+          }`}
+        >
+          <div className="flex justify-between items-start">
+            <span className="text-[10px] text-zinc-400 font-mono-terminal uppercase block mb-1">Entregados Clientes</span>
+            {selectedStatus === "Entregado" && <span className="w-1.5 h-1.5 rounded-full bg-zinc-400 animate-pulse"></span>}
+          </div>
           <span className="text-xl font-mono-terminal font-bold text-zinc-400">{stats.entregados}</span>
         </div>
       </div>
@@ -262,7 +339,7 @@ export default function DashboardPage() {
           </button>
         </h3>
         
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Búsqueda por Texto */}
           <div className="relative">
             <label className="text-[10px] font-mono-terminal text-zinc-500 uppercase block mb-1">Buscar por IMEI, Equipo o Cliente</label>
@@ -276,6 +353,24 @@ export default function DashboardPage() {
               />
               <Search className="absolute left-3 top-2 w-3.5 h-3.5 text-zinc-500" />
             </div>
+          </div>
+
+          {/* Filtrar por Estado */}
+          <div>
+            <label className="text-[10px] font-mono-terminal text-zinc-500 uppercase block mb-1">Estado</label>
+            <select
+              value={selectedStatus || ""}
+              onChange={(e) => setSelectedStatus(e.target.value || null)}
+              className="w-full px-3 py-1.5 text-xs bg-zinc-950 border border-zinc-800 text-white font-mono-terminal rounded-none focus:outline-hidden focus:border-amber-500 cursor-pointer"
+            >
+              <option value="">Todos los pendientes</option>
+              <option value="Recibido">Recibido (Nuevo)</option>
+              <option value="En reparación">En Taller (Téc)</option>
+              <option value="Recibido del técnico">Recibido de Téc</option>
+              <option value="Enviado al suplidor">En Marca (Suplidor)</option>
+              <option value="Recibido del suplidor">Recibidos de Marca</option>
+              <option value="Entregado">Entregados Clientes</option>
+            </select>
           </div>
 
           {/* Rango de Fechas - Desde */}
@@ -306,13 +401,14 @@ export default function DashboardPage() {
         </div>
 
         {/* Reset de Filtros */}
-        {(searchQuery || dateFrom || dateTo) && (
+        {(searchQuery || dateFrom || dateTo || selectedStatus) && (
           <div className="mt-3 flex justify-end">
             <button
               onClick={() => {
                 setSearchQuery("");
                 setDateFrom("");
                 setDateTo("");
+                setSelectedStatus(null);
               }}
               className="px-3 py-1 text-[10px] font-mono-terminal bg-zinc-900 hover:bg-zinc-850 text-zinc-400 hover:text-white transition-all cursor-pointer border border-zinc-800 uppercase rounded-none"
             >
