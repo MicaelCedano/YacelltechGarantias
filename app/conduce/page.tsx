@@ -135,110 +135,114 @@ export default async function ConducePage({ searchParams }: ConducePageProps) {
       </div>
 
       {/* Documento Conduce de Entrega */}
-      <main className="w-full max-w-3xl bg-white text-black border border-zinc-300 p-8 md:p-12 shadow-2xl relative print:shadow-none print:p-0 print:border-none print:w-full print:max-w-full">
+      <main className="w-full max-w-3xl bg-white text-black border border-zinc-300 shadow-2xl relative print:shadow-none print:border-none print:w-full print:max-w-full">
         
-        {/* Cabecera del Conduce */}
-        <div className="flex flex-col sm:flex-row justify-between items-center sm:items-start gap-6 border-b-2 border-black pb-6 mb-6">
-          <div className="flex flex-col items-center sm:items-start">
-            {/* Logo de Sena Digital */}
-            <img 
-              src="/logo-sena.png" 
-              alt="Sena Digital Logo" 
-              className="h-16 w-auto object-contain mb-2 print:h-20"
-            />
-            <h1 className="text-xl font-bold font-mono-terminal tracking-wider text-[#e30613]">
-              Señal Digital
-            </h1>
-            <p className="text-[10px] text-zinc-650 font-mono-terminal uppercase tracking-wider">
-              Servicio Técnico y Distribución de Dispositivos
-            </p>
-          </div>
-
-          <div className="text-center sm:text-right flex flex-col gap-1">
-            <span className="text-xs font-bold bg-black text-white px-3 py-1 font-mono-terminal tracking-wider inline-block uppercase select-none print:border print:border-black">
-              {docTitle}
-            </span>
-          </div>
-        </div>
-
-        {/* Detalles de la Entrega */}
-        <div className="mb-6">
-          <h3 className="text-xs font-mono-terminal font-bold uppercase tracking-wider text-zinc-800 border-b border-zinc-400 pb-1 mb-3">
-            {detailTitle}
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-            <div className="flex items-center gap-2">
-              <User className="w-4 h-4 text-zinc-550" />
-              <div>
-                <span className="text-zinc-500 uppercase text-[9px] block">{userLabel}</span>
-                <span className="font-bold text-zinc-900">{targetName}</span>
-              </div>
+        <div id="conduce-receipt" className="bg-white p-8 md:p-12 print:p-0">
+          {/* Cabecera del Conduce */}
+          <div className="flex flex-col sm:flex-row justify-between items-center sm:items-start gap-6 border-b-2 border-black pb-6 mb-6">
+            <div className="flex flex-col items-center sm:items-start">
+              {/* Logo de Sena Digital */}
+              <img 
+                src="/logo-sena.png" 
+                alt="Sena Digital Logo" 
+                className="h-16 w-auto object-contain mb-2 print:h-20"
+              />
+              <h1 className="text-xl font-bold font-mono-terminal tracking-wider text-[#e30613]">
+                Señal Digital
+              </h1>
+              <p className="text-[10px] text-zinc-650 font-mono-terminal uppercase tracking-wider">
+                Servicio Técnico y Distribución de Dispositivos
+              </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-zinc-500" />
-              <div>
-                <span className="text-zinc-500 uppercase text-[9px] block">{dateLabel}</span>
-                <span className="font-bold text-zinc-900">{getTodayFormatted()}</span>
-              </div>
+
+            <div className="text-center sm:text-right flex flex-col gap-1">
+              <span className="text-xs font-bold bg-black text-white px-3 py-1 font-mono-terminal tracking-wider inline-block uppercase select-none print:border print:border-black">
+                {docTitle}
+              </span>
             </div>
           </div>
-        </div>
 
-        {/* Detalle de los Equipos Entregados */}
-        <div className="mb-8">
-          <h3 className="text-xs font-mono-terminal font-bold uppercase tracking-wider text-zinc-800 border-b border-zinc-400 pb-1 mb-3">
-            {tableSubtitle}
-          </h3>
-          
-          <table className="w-full text-left border-collapse text-xs border border-zinc-300">
-            <thead>
-              <tr className="bg-zinc-100 border-b border-zinc-300 uppercase font-mono-terminal tracking-wider text-[10px] text-zinc-700 font-bold select-none">
-                <th className="p-2 border-r border-zinc-300 w-1/3">Modelo</th>
-                <th className="p-2 border-r border-zinc-300 w-1/3">IMEI</th>
-                <th className="p-2 w-1/3">{isSupplier ? "Falla Diagnosticada" : "Trabajos Realizados / Diagnóstico"}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-300">
-              {items.map((item) => (
-                <tr key={item.id} className="text-zinc-900 hover:bg-zinc-50/10">
-                  <td className="p-2 border-r border-zinc-300 font-semibold">{item.model}</td>
-                  <td className="p-2 border-r border-zinc-300 font-mono-terminal tracking-wider">{item.imei}</td>
-                  <td className="p-2 font-mono-terminal italic bg-zinc-50/50 text-[11px] leading-tight">{item.problem}</td>
+          {/* Detalles de la Entrega */}
+          <div className="mb-6">
+            <h3 className="text-xs font-mono-terminal font-bold uppercase tracking-wider text-zinc-800 border-b border-zinc-400 pb-1 mb-3">
+              {detailTitle}
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4 text-zinc-550" />
+                <div>
+                  <span className="text-zinc-500 uppercase text-[9px] block">{userLabel}</span>
+                  <span className="font-bold text-zinc-900">{targetName}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-zinc-550" />
+                <div>
+                  <span className="text-zinc-500 uppercase text-[9px] block">{dateLabel}</span>
+                  <span className="font-bold text-zinc-900">{getTodayFormatted()}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Detalle de los Equipos Entregados */}
+          <div className="mb-8">
+            <h3 className="text-xs font-mono-terminal font-bold uppercase tracking-wider text-zinc-800 border-b border-zinc-400 pb-1 mb-3">
+              {tableSubtitle}
+            </h3>
+            
+            <table className="w-full text-left border-collapse text-xs border border-zinc-300">
+              <thead>
+                <tr className="bg-zinc-100 border-b border-zinc-300 uppercase font-mono-terminal tracking-wider text-[10px] text-zinc-700 font-bold select-none">
+                  <th className="p-2 border-r border-zinc-300 w-1/3">Modelo</th>
+                  <th className="p-2 border-r border-zinc-300 w-1/3">IMEI</th>
+                  <th className="p-2 w-1/3">{isSupplier ? "Falla Diagnosticada" : "Trabajos Realizados / Diagnóstico"}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Declaración de conformidad */}
-        <div className="mb-10 p-4 border border-zinc-300 bg-zinc-50 text-[11px] leading-relaxed text-zinc-800">
-          <div className="flex gap-2.5 items-start">
-            <ShieldCheck className={`w-5 h-5 ${policyColor} shrink-0 mt-0.5`} />
-            <p>
-              {policyText}
-            </p>
-          </div>
-        </div>
-
-        {/* Bloque de Firmas */}
-        <div className="grid grid-cols-2 gap-12 mt-12 mb-6 pt-4 text-xs font-mono-terminal uppercase">
-          
-          {/* Firma Cliente / Suplidor / Tecnico */}
-          <div className="flex flex-col items-center">
-            <div className="w-full border-t border-zinc-400 mt-10 mb-2"></div>
-            <span className="font-bold text-zinc-900">{signatureLeft}</span>
+              </thead>
+              <tbody className="divide-y divide-zinc-300">
+                {items.map((item) => (
+                  <tr key={item.id} className="text-zinc-900 hover:bg-zinc-50/10">
+                    <td className="p-2 border-r border-zinc-300 font-semibold">{item.model}</td>
+                    <td className="p-2 border-r border-zinc-300 font-mono-terminal tracking-wider">{item.imei}</td>
+                    <td className="p-2 font-mono-terminal italic bg-zinc-50/50 text-[11px] leading-tight">{item.problem}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
-          {/* Firma Entregado */}
-          <div className="flex flex-col items-center">
-            <div className="w-full border-t border-zinc-400 mt-10 mb-2"></div>
-            <span className="font-bold text-zinc-900">{signatureRight}</span>
-            <span className="text-[10px] text-zinc-500 mt-1">Firma del Técnico Autorizado</span>
+          {/* Declaración de conformidad */}
+          <div className="mb-10 p-4 border border-zinc-300 bg-zinc-50 text-[11px] leading-relaxed text-zinc-800">
+            <div className="flex gap-2.5 items-start">
+              <ShieldCheck className={`w-5 h-5 ${policyColor} shrink-0 mt-0.5`} />
+              <p>
+                {policyText}
+              </p>
+            </div>
+          </div>
+
+          {/* Bloque de Firmas */}
+          <div className="grid grid-cols-2 gap-12 mt-12 mb-6 pt-4 text-xs font-mono-terminal uppercase">
+            
+            {/* Firma Cliente / Suplidor / Tecnico */}
+            <div className="flex flex-col items-center">
+              <div className="w-full border-t border-zinc-400 mt-10 mb-2"></div>
+              <span className="font-bold text-zinc-900">{signatureLeft}</span>
+            </div>
+
+            {/* Firma Entregado */}
+            <div className="flex flex-col items-center">
+              <div className="w-full border-t border-zinc-400 mt-10 mb-2"></div>
+              <span className="font-bold text-zinc-900">{signatureRight}</span>
+              <span className="text-[10px] text-zinc-500 mt-1">Firma del Técnico Autorizado</span>
+            </div>
           </div>
         </div>
 
         {/* Acciones de Impresión / Cierre */}
-        <PrintActions printLabel={isSupplier ? "Imprimir Conduce de Envío" : isTech ? "Imprimir Conduce Asignación" : "Imprimir Conduce"} />
+        <div className="p-8 md:p-12 pt-0 pb-4 no-print border-t border-zinc-150 bg-white">
+          <PrintActions printLabel={isSupplier ? "Imprimir Conduce de Envío" : isTech ? "Imprimir Conduce Asignación" : "Imprimir Conduce"} />
+        </div>
       </main>
     </div>
   );
