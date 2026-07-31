@@ -11,6 +11,10 @@ import {
 import { StatusBadge } from "@/components/StatusBadge";
 import { WarrantyCase } from "@/components/CaseDrawer";
 
+interface ReceiveItem extends WarrantyCase {
+  returnReason?: string;
+}
+
 export default function RecepcionTecnicoPage() {
   const router = useRouter();
 
@@ -42,7 +46,8 @@ export default function RecepcionTecnicoPage() {
   
   // Recepcion States
   const [imeiInput, setImeiInput] = useState("");
-  const [receiveList, setReceiveList] = useState<WarrantyCase[]>([]);
+  const [reasonInput, setReasonInput] = useState("");
+  const [receiveList, setReceiveList] = useState<ReceiveItem[]>([]);
 
   // Refs
   const inputRef = useRef<HTMLInputElement>(null);
@@ -77,6 +82,7 @@ export default function RecepcionTecnicoPage() {
     setActiveTab(tab);
     setReceiveList([]);
     setImeiInput("");
+    setReasonInput("");
     setCreatedConduce(null);
     setTimeout(() => inputRef.current?.focus(), 100);
   };
@@ -130,9 +136,15 @@ export default function RecepcionTecnicoPage() {
       return;
     }
 
-    setReceiveList((prev) => [...prev, targetCase]);
+    const itemToAdd: ReceiveItem = {
+      ...targetCase,
+      returnReason: activeTab === "sin_reparar" ? reasonInput.trim() : "",
+    };
+
+    setReceiveList((prev) => [...prev, itemToAdd]);
     toast.success(`Equipo agregado: ${targetCase.model}`);
     setImeiInput("");
+    setReasonInput("");
     inputRef.current?.focus();
   };
 
@@ -147,6 +159,7 @@ export default function RecepcionTecnicoPage() {
   const handleReset = () => {
     setReceiveList([]);
     setImeiInput("");
+    setReasonInput("");
     toast.success("Lista de recepción limpiada.");
     inputRef.current?.focus();
   };
@@ -164,16 +177,24 @@ export default function RecepcionTecnicoPage() {
     const toastId = toast.loading(actionLabel);
 
     try {
-      // Actualizar estado de los equipos en paralelo
-      const updatePromises = receiveList.map((item) =>
-        fetch(`/api/warranty/${item.case_code}`, {
+      // Actualizar estado (y motivo si aplica) de los equipos en paralelo
+      const updatePromises = receiveList.map((item) => {
+        const payload: Record<string, string> = { status: targetStatus };
+
+        // Si se especificó un comentario/motivo de no solución, actualizar la falla/diagnóstico
+        if (activeTab === "sin_reparar" && item.returnReason && item.returnReason.trim()) {
+          const cleanOriginal = item.problem.replace(/\s*\[SIN REPARAR:[^\]]*\]/gi, "").trim();
+          payload.problem = `${cleanOriginal} [SIN REPARAR: ${item.returnReason.trim()}]`;
+        }
+
+        return fetch(`/api/warranty/${item.case_code}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ status: targetStatus }),
-        })
-      );
+          body: JSON.stringify(payload),
+        });
+      });
 
       const responses = await Promise.all(updatePromises);
       const allOk = responses.every((res) => res.ok);
@@ -379,7 +400,7 @@ export default function RecepcionTecnicoPage() {
                   : "Escanear o Escribir IMEI del Equipo Sin Reparar (En Reparación por el Técnico)"}
               </label>
               
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <div className="relative flex-1">
                   <input
                     ref={inputRef}
@@ -393,6 +414,20 @@ export default function RecepcionTecnicoPage() {
                   />
                   <Scan className="absolute left-3 top-3.5 w-4 h-4 text-zinc-650" />
                 </div>
+
+                {activeTab === "sin_reparar" && (
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      placeholder="Motivo / Causa por la que no se reparó (Opcional)..."
+                      value={reasonInput}
+                      onChange={(e) => setReasonInput(e.target.value)}
+                      disabled={isLoading || isSubmitting}
+                      className="w-full px-3 py-2.5 bg-zinc-950 border border-amber-900/40 text-amber-300 rounded-none font-mono-terminal tracking-wider text-xs placeholder:text-zinc-700 focus:border-amber-500"
+                    />
+                  </div>
+                )}
+
                 <button
                   type="submit"
                   disabled={isLoading || isSubmitting || !imeiInput}
@@ -451,7 +486,8 @@ export default function RecepcionTecnicoPage() {
                       <th className="p-3">Código</th>
                       <th className="p-3">Modelo</th>
                       <th className="p-3">IMEI</th>
-                      <th className="p-3">Falla / Diagnóstico</th>
+                      <th className="p-3">Falla Original</th>
+                      {activeTab === "sin_reparar" && <th className="p-3">Motivo / Causa de no reparación</th>}
                       <th className="p-3">Propietario / Cliente</th>
                       <th className="p-3">Cambio de Estado</th>
                       <th className="p-3 text-center">Remover</th>
@@ -463,7 +499,25 @@ export default function RecepcionTecnicoPage() {
                         <td className="p-3 font-mono-terminal text-amber-500 font-bold">{item.case_code}</td>
                         <td className="p-3 font-semibold text-white">{item.model}</td>
                         <td className="p-3 font-mono-terminal text-zinc-350">{item.imei}</td>
-                        <td className="p-3 text-zinc-450 italic truncate max-w-[200px]">{item.problem}</td>
+                        <td className="p-3 text-zinc-450 italic truncate max-w-[180px]">{item.problem}</td>
+                        
+                        {activeTab === "sin_reparar" && (
+                          <td className="p-3 min-w-[220px]">
+                            <input
+                              type="text"
+                              placeholder="Escriba motivo (ej: pieza descontinuada)..."
+                              value={item.returnReason || ""}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setReceiveList((prev) =>
+                                  prev.map((c) => (c.id === item.id ? { ...c, returnReason: val } : c))
+                                );
+                              }}
+                              className="w-full px-2.5 py-1.5 bg-zinc-950 border border-zinc-800 focus:border-amber-500 text-amber-300 font-mono-terminal text-xs rounded-none placeholder:text-zinc-700"
+                            />
+                          </td>
+                        )}
+
                         <td className="p-3 text-zinc-400">{item.client_name}</td>
                         <td className="p-3">
                           <div className="flex items-center gap-1.5 flex-wrap">
