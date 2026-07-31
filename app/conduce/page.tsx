@@ -52,9 +52,11 @@ export default async function ConducePage({ searchParams }: ConducePageProps) {
   // Cliente común del despacho (primero de la lista)
   const clientName = items[0].client_name;
   
-  // Determinar si es un conduce de suplidor o de técnico
+  // Determinar el tipo de conduce
   const isSupplier = searchParams.type === "suplidor";
   const isTech = searchParams.type === "tecnico";
+  const isRecTec = searchParams.type === "recepcion_tecnico";
+  const isRecSup = searchParams.type === "recepcion_suplidor";
   const targetName = searchParams.suplidor || searchParams.tecnico || clientName;
 
   // Fecha de entrega en zona horaria de Santo Domingo (formato largo)
@@ -64,27 +66,36 @@ export default async function ConducePage({ searchParams }: ConducePageProps) {
 
   // Títulos dinámicos de sección
   let moduleTitle = "DESPACHO DE EQUIPOS";
-  if (isSupplier) moduleTitle = "ENVÍO A LA MARCA";
+  if (isRecTec) moduleTitle = "RECEPCIÓN DESDE TÉCNICO";
+  else if (isRecSup) moduleTitle = "RECEPCIÓN DESDE MARCA";
+  else if (isSupplier) moduleTitle = "ENVÍO A LA MARCA";
   else if (isTech) moduleTitle = "ASIGNACIÓN A TÉCNICO";
 
   let docTitle = "CONDUCE DE ENTREGA";
-  if (isSupplier) docTitle = "CONDUCE DE ENVÍO A LA MARCA";
+  if (isRecTec) docTitle = "CONDUCE DE RECEPCIÓN DE TÉCNICO";
+  else if (isRecSup) docTitle = "CONDUCE DE RECEPCIÓN DE MARCA";
+  else if (isSupplier) docTitle = "CONDUCE DE ENVÍO A LA MARCA";
   else if (isTech) docTitle = "CONDUCE DE ASIGNACIÓN A TÉCNICO";
 
   let detailTitle = "Datos del Receptor";
-  if (isSupplier) detailTitle = "Datos de la Marca / Suplidor";
+  if (isRecTec) detailTitle = "Datos del Técnico";
+  else if (isRecSup || isSupplier) detailTitle = "Datos de la Marca / Suplidor";
   else if (isTech) detailTitle = "Datos del Técnico";
 
   let userLabel = "Cliente";
-  if (isSupplier) userLabel = "Marca / Proveedor";
+  if (isRecTec) userLabel = "Técnico Devolvente";
+  else if (isRecSup || isSupplier) userLabel = "Marca / Proveedor";
   else if (isTech) userLabel = "Técnico Asignado";
 
   let dateLabel = "Fecha de Entrega";
-  if (isSupplier) dateLabel = "Fecha de Envío";
+  if (isRecTec || isRecSup) dateLabel = "Fecha de Recepción";
+  else if (isSupplier) dateLabel = "Fecha de Envío";
   else if (isTech) dateLabel = "Fecha de Asignación";
 
   let tableSubtitle = `Detalle de Equipos Entregados (${items.length})`;
-  if (isSupplier) tableSubtitle = `Detalle de Equipos Enviados (${items.length})`;
+  if (isRecTec) tableSubtitle = `Detalle de Equipos Recibidos del Técnico (${items.length})`;
+  else if (isRecSup) tableSubtitle = `Detalle de Equipos Recibidos de la Marca (${items.length})`;
+  else if (isSupplier) tableSubtitle = `Detalle de Equipos Enviados (${items.length})`;
   else if (isTech) tableSubtitle = `Detalle de Equipos Asignados (${items.length})`;
 
   let policyText = (
@@ -93,7 +104,22 @@ export default async function ConducePage({ searchParams }: ConducePageProps) {
     </>
   );
   let policyColor = "text-emerald-600";
-  if (isSupplier) {
+
+  if (isRecTec) {
+    policyText = (
+      <>
+        <strong>RECEPCIÓN Y DEVOLUCIÓN DE TALLER:</strong> Se hace constar que los dispositivos detallados en este conduce han sido recibidos de retorno del técnico de taller para su reingreso a almacén central, entrega al cliente o despacho.
+      </>
+    );
+    policyColor = "text-emerald-600";
+  } else if (isRecSup) {
+    policyText = (
+      <>
+        <strong>RECEPCIÓN DE SOPORTE TÉCNICO OFICIAL:</strong> Se hace constar la recepción de retorno de los dispositivos detallados procedentes del centro de servicio técnico autorizado de la marca/proveedor.
+      </>
+    );
+    policyColor = "text-purple-600";
+  } else if (isSupplier) {
     policyText = (
       <>
         <strong>ENVÍO A SOPORTE TÉCNICO:</strong> Se hace constar que los dispositivos detallados en este conduce son enviados a soporte técnico oficial de la marca para su debida revisión y reparación bajo los términos de garantía.
@@ -110,11 +136,21 @@ export default async function ConducePage({ searchParams }: ConducePageProps) {
   }
 
   let signatureLeft = "Recibido Conforme (Cliente)";
-  if (isSupplier) signatureLeft = "Recibido por (Marca / Suplidor)";
+  if (isRecTec) signatureLeft = "Entregado por (Técnico)";
+  else if (isRecSup) signatureLeft = "Entregado por (Marca / Suplidor)";
+  else if (isSupplier) signatureLeft = "Recibido por (Marca / Suplidor)";
   else if (isTech) signatureLeft = "Recibido por (Técnico Asignado)";
 
   let signatureRight = "Entregado Por (Taller)";
-  if (isTech) signatureRight = "Asignado Por (Supervisor)";
+  if (isRecTec) signatureRight = "Recibido por (Recepción / Almacén)";
+  else if (isRecSup) signatureRight = "Recibido por (Garantías / Almacén)";
+  else if (isTech) signatureRight = "Asignado Por (Supervisor)";
+
+  let printLabel = "Imprimir Conduce";
+  if (isRecTec) printLabel = "Imprimir Conduce Recepción Técnico";
+  else if (isRecSup) printLabel = "Imprimir Conduce Recepción Marca";
+  else if (isSupplier) printLabel = "Imprimir Conduce de Envío";
+  else if (isTech) printLabel = "Imprimir Conduce Asignación";
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-[#f3f4f6] font-sans-sora flex flex-col items-center p-4 md:p-8 w-full print:bg-white print:text-black">
@@ -196,7 +232,7 @@ export default async function ConducePage({ searchParams }: ConducePageProps) {
                 <tr className="bg-zinc-100 border-b border-zinc-300 uppercase font-mono-terminal tracking-wider text-[10px] text-zinc-700 font-bold select-none">
                   <th className="p-2 border-r border-zinc-300 w-1/3">Modelo</th>
                   <th className="p-2 border-r border-zinc-300 w-1/3">IMEI</th>
-                  <th className="p-2 w-1/3">{isSupplier ? "Falla Diagnosticada" : "Trabajos Realizados / Diagnóstico"}</th>
+                  <th className="p-2 w-1/3">{(isSupplier || isRecSup) ? "Falla Diagnosticada" : "Trabajos Realizados / Diagnóstico"}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-300">
@@ -241,7 +277,7 @@ export default async function ConducePage({ searchParams }: ConducePageProps) {
 
         {/* Acciones de Impresión / Cierre */}
         <div className="p-8 md:p-12 pt-0 pb-4 no-print border-t border-zinc-150 bg-white">
-          <PrintActions printLabel={isSupplier ? "Imprimir Conduce de Envío" : isTech ? "Imprimir Conduce Asignación" : "Imprimir Conduce"} />
+          <PrintActions printLabel={printLabel} />
         </div>
       </main>
     </div>

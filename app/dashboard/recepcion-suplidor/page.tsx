@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { 
   ArrowLeft, Smartphone, CheckSquare, Trash2, 
-  Scan, RefreshCw, ClipboardList
+  Scan, RefreshCw, ClipboardList, Printer, CheckCircle
 } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { WarrantyCase } from "@/components/CaseDrawer";
@@ -30,6 +30,11 @@ export default function RecepcionSuplidorPage() {
   const [allCases, setAllCases] = useState<WarrantyCase[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [createdConduce, setCreatedConduce] = useState<{
+    id: string;
+    supplierName: string;
+    caseCodes: string[];
+  } | null>(null);
   
   // Recepcion States
   const [imeiInput, setImeiInput] = useState("");
@@ -120,6 +125,7 @@ export default function RecepcionSuplidorPage() {
   const handleReset = () => {
     setReceiveList([]);
     setImeiInput("");
+    setCreatedConduce(null);
     toast.success("Lista de recepción limpiada.");
     inputRef.current?.focus();
   };
@@ -150,7 +156,34 @@ export default function RecepcionSuplidorPage() {
         throw new Error("Uno o más equipos fallaron al actualizar el estado de recepción.");
       }
 
-      toast.success(`¡Se recibieron con éxito ${receiveList.length} equipos del suplidor!`, { id: toastId });
+      // Registrar el conduce en el historial
+      const caseCodesArray = receiveList.map((item) => item.case_code);
+      const supplierNameSaved = receiveList[0]?.model 
+        ? `${receiveList[0].model.split(" ")[0]} / Suplidor`
+        : "Marca / Suplidor";
+
+      const condRes = await fetch("/api/conduces", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          client_name: `Recepción de Marca (${supplierNameSaved})`,
+          case_codes: caseCodesArray,
+          is_supplier: true,
+        }),
+      });
+
+      const condResult = condRes.ok ? await condRes.json() : null;
+
+      toast.success(`¡Se recibieron con éxito ${receiveList.length} equipos del suplidor y se generó el conduce!`, { id: toastId });
+      
+      // Guardar información para la pantalla de éxito
+      setCreatedConduce({
+        id: condResult?.data?.id || "SUPL-Generado",
+        supplierName: supplierNameSaved,
+        caseCodes: caseCodesArray,
+      });
       
       // Limpiar estados y re-cargar registros de la API
       setReceiveList([]);
@@ -208,6 +241,60 @@ export default function RecepcionSuplidorPage() {
           <span>ACTUALIZAR DATOS</span>
         </button>
       </div>
+
+      {createdConduce ? (
+        /* Pantalla de Éxito Post-Registro */
+        <div className="w-full bg-[#121212] border border-purple-500/30 p-6 md:p-8 shadow-2xl relative overflow-hidden mb-6">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 translate-x-12 -translate-y-12 rotate-45 border-b border-purple-500/20" />
+          
+          <div className="flex items-start gap-4 mb-6">
+            <div className="bg-purple-600 text-white p-2 border border-purple-700 shrink-0">
+              <CheckCircle className="w-6 h-6 animate-pulse" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-white uppercase font-mono-terminal tracking-wide">
+                Recepción desde Marca Registrada
+              </h2>
+              <p className="text-sm text-zinc-400">
+                Se han recibido {createdConduce.caseCodes.length} equipos del suplidor / marca (<strong className="text-white">{createdConduce.supplierName}</strong>).
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-zinc-950 border border-zinc-850 p-6 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+              <span className="text-[10px] tracking-wider text-zinc-500 font-mono-terminal uppercase block mb-1">
+                CÓDIGO DE CONDUCE DE RECEPCIÓN MARCA
+              </span>
+              <span className="text-md font-mono-terminal font-bold text-purple-400 tracking-wider">
+                {createdConduce.id}
+              </span>
+              <span className="text-[10px] tracking-wider text-zinc-650 font-mono-terminal block mt-2">
+                EQUIPOS: {createdConduce.caseCodes.join(", ")}
+              </span>
+            </div>
+            
+            <a
+              href={`/conduce?cases=${createdConduce.caseCodes.join(",")}&type=recepcion_suplidor&suplidor=${encodeURIComponent(createdConduce.supplierName)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="h-10 px-5 inline-flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-mono-terminal text-xs uppercase tracking-wider font-bold transition-all rounded-none cursor-pointer shrink-0 no-underline"
+            >
+              <Printer className="w-4 h-4" />
+              <span>IMPRIMIR CONDUCE RECEPCIÓN MARCA</span>
+            </a>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-end border-t border-zinc-900 pt-5">
+            <button
+              onClick={() => setCreatedConduce(null)}
+              className="px-5 py-2.5 bg-zinc-900 border border-zinc-850 hover:bg-zinc-800 text-zinc-300 font-mono-terminal text-xs uppercase tracking-wider transition-all rounded-none cursor-pointer"
+            >
+              REALIZAR OTRA RECEPCIÓN
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {/* Caja Principal */}
       <div className="grid grid-cols-1 gap-6">
