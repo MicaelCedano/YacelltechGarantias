@@ -367,6 +367,7 @@ export function CaseDrawer({ caseData, isOpen, onClose, onStatusUpdated, onCaseD
                       <option value="Enviado al suplidor">Enviado al suplidor</option>
                       <option value="Recibido del suplidor">Recibido del suplidor</option>
                       <option value="Entregado">Entregado</option>
+                      <option value="Nota de crédito">Nota de crédito</option>
                     </select>
                     {isUpdating && (
                       <span className="absolute right-2 pointer-events-none">

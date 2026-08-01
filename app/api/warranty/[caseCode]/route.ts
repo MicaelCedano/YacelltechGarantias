@@ -10,7 +10,8 @@ const VALID_STATUSES = [
   "Recibido del técnico",
   "Enviado al suplidor",
   "Recibido del suplidor",
-  "Entregado"
+  "Entregado",
+  "Nota de crédito"
 ];
 
 export async function PATCH(

@@ -187,15 +187,15 @@ export default function DashboardPage() {
       // Filtro de equipos con más de 30 días (Crédito)
       if (showOlderThan30) {
         const daysDiff = getDaysDifference(item.entry_date, todayStr);
-        if (item.status === "Entregado" || daysDiff < 30) return false;
+        if (item.status === "Entregado" || item.status === "Nota de crédito" || daysDiff < 30) return false;
       }
 
       // Si hay un estado seleccionado por filtro, filtramos por él (incluyendo "Entregado").
-      // Si no hay ninguno seleccionado, mostramos solo los pendientes (excluyendo "Entregado").
+      // Si no hay ninguno seleccionado, mostramos solo los pendientes (excluyendo "Entregado" y "Nota de crédito").
       if (selectedStatus) {
         if (item.status !== selectedStatus) return false;
       } else {
-        if (item.status === "Entregado") return false;
+        if (item.status === "Entregado" || item.status === "Nota de crédito") return false;
       }
 
       // 1. Filtro de búsqueda (IMEI, Modelo, Cliente)
@@ -233,7 +233,8 @@ export default function DashboardPage() {
     enSuplidor: cases.filter((c) => c.status === "Enviado al suplidor").length,
     recibidoSuplidor: cases.filter((c) => c.status === "Recibido del suplidor").length,
     entregados: cases.filter((c) => c.status === "Entregado").length,
-    olderThan30: cases.filter((c) => c.status !== "Entregado" && getDaysDifference(c.entry_date, todayStr) >= 30).length,
+    notaCredito: cases.filter((c) => c.status === "Nota de crédito").length,
+    olderThan30: cases.filter((c) => c.status !== "Entregado" && c.status !== "Nota de crédito" && getDaysDifference(c.entry_date, todayStr) >= 30).length,
   };
 
   return (
@@ -273,7 +274,7 @@ export default function DashboardPage() {
       )}
 
       {/* Panel de Estadísticas Fijas */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
         {/* Recibidos */}
         <div 
           onClick={() => setSelectedStatus(selectedStatus === "Recibido" ? null : "Recibido")}
@@ -354,6 +355,22 @@ export default function DashboardPage() {
           <span className="text-xl font-mono-terminal font-bold text-purple-500">{stats.recibidoSuplidor}</span>
         </div>
 
+        {/* Nota de Crédito */}
+        <div 
+          onClick={() => setSelectedStatus(selectedStatus === "Nota de crédito" ? null : "Nota de crédito")}
+          className={`p-4 transition-all duration-200 cursor-pointer select-none border border-zinc-850 border-l-2 hover:scale-[1.02] active:scale-[0.98] ${
+            selectedStatus === "Nota de crédito"
+              ? "bg-rose-950/30 border-rose-500/70 border-l-rose-400 shadow-[0_0_15px_rgba(244,63,94,0.15)]"
+              : "bg-zinc-900 hover:bg-zinc-850 border-l-rose-500"
+          }`}
+        >
+          <div className="flex justify-between items-start">
+            <span className="text-[10px] text-zinc-400 font-mono-terminal uppercase block mb-1">Nota de Crédito</span>
+            {selectedStatus === "Nota de crédito" && <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse"></span>}
+          </div>
+          <span className="text-xl font-mono-terminal font-bold text-rose-500">{stats.notaCredito}</span>
+        </div>
+
         {/* Entregados Clientes */}
         <div 
           onClick={() => setSelectedStatus(selectedStatus === "Entregado" ? null : "Entregado")}
@@ -420,6 +437,7 @@ export default function DashboardPage() {
               <option value="Enviado al suplidor">En Marca (Suplidor)</option>
               <option value="Recibido del suplidor">Recibidos de Marca</option>
               <option value="Entregado">Entregados Clientes</option>
+              <option value="Nota de crédito">Notas de Crédito</option>
             </select>
           </div>
 

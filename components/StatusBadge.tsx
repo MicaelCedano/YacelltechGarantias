@@ -6,7 +6,8 @@ export type WarrantyStatus =
   | "Recibido del técnico"
   | "Enviado al suplidor"
   | "Recibido del suplidor"
-  | "Entregado";
+  | "Entregado"
+  | "Nota de crédito";
 
 interface StatusBadgeProps {
   status: WarrantyStatus | string;
@@ -48,6 +49,11 @@ export function StatusBadge({ status, className = "" }: StatusBadgeProps) {
       bgClass = "bg-zinc-800";
       borderClass = "border-zinc-700";
       textClass = "text-zinc-400";
+      break;
+    case "Nota de crédito":
+      bgClass = "bg-rose-950/40";
+      borderClass = "border-rose-500/70";
+      textClass = "text-rose-400 font-bold";
       break;
     default:
       bgClass = "bg-zinc-900";
