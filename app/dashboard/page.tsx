@@ -6,9 +6,19 @@ import { CopyButton } from "@/components/CopyButton";
 import { CaseDrawer, WarrantyCase } from "@/components/CaseDrawer";
 import { Header } from "@/components/Header";
 import { 
-  Search, Filter, RotateCw, Eye, ChevronDown, ChevronUp, Package, Printer, Check
+  Search, Filter, RotateCw, Eye, ChevronDown, ChevronUp, Package, Printer, Check, AlertTriangle, Clock
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { getTodayDateStr } from "@/lib/tz-utils";
+
+// Helper function to calculate exact days elapsed
+const getDaysDifference = (entryDateStr: string, todayDateStr: string): number => {
+  if (!entryDateStr || !todayDateStr) return 0;
+  const entryDate = new Date(entryDateStr + "T00:00:00");
+  const todayDate = new Date(todayDateStr + "T00:00:00");
+  const diffTime = todayDate.getTime() - entryDate.getTime();
+  return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+};
 
 export default function DashboardPage() {
   // Data States
@@ -32,6 +42,7 @@ export default function DashboardPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [showOlderThan30, setShowOlderThan30] = useState(false);
 
   // UI Interactive States
   const [selectedCase, setSelectedCase] = useState<WarrantyCase | null>(null);
@@ -169,8 +180,16 @@ export default function DashboardPage() {
   };
 
   // Filtrado y ordenado de casos
+  const todayStr = getTodayDateStr();
+
   const filteredCases = cases
     .filter((item) => {
+      // Filtro de equipos con más de 30 días (Crédito)
+      if (showOlderThan30) {
+        const daysDiff = getDaysDifference(item.entry_date, todayStr);
+        if (item.status === "Entregado" || daysDiff < 30) return false;
+      }
+
       // Si hay un estado seleccionado por filtro, filtramos por él (incluyendo "Entregado").
       // Si no hay ninguno seleccionado, mostramos solo los pendientes (excluyendo "Entregado").
       if (selectedStatus) {
@@ -214,6 +233,7 @@ export default function DashboardPage() {
     enSuplidor: cases.filter((c) => c.status === "Enviado al suplidor").length,
     recibidoSuplidor: cases.filter((c) => c.status === "Recibido del suplidor").length,
     entregados: cases.filter((c) => c.status === "Entregado").length,
+    olderThan30: cases.filter((c) => c.status !== "Entregado" && getDaysDifference(c.entry_date, todayStr) >= 30).length,
   };
 
   return (
@@ -221,6 +241,36 @@ export default function DashboardPage() {
       
       {/* Header Compartido */}
       <Header />
+
+      {/* Alerta de Nota de Crédito (+30 días) */}
+      {stats.olderThan30 > 0 && (
+        <div className="mb-6 bg-red-950/20 border border-red-900/40 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-[0_0_15px_rgba(239,68,68,0.05)] border-l-4 border-l-red-500">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="p-2 bg-red-500/10 text-red-400 border border-red-500/20 shrink-0">
+              <AlertTriangle className="w-5 h-5 text-red-500 animate-pulse" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-red-400 uppercase tracking-wider font-mono-terminal flex items-center gap-1.5">
+                <span>Alerta de Nota de Crédito</span>
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
+              </h4>
+              <p className="text-[11px] text-zinc-400 font-sans-sora mt-0.5 leading-relaxed">
+                Hay <span className="font-bold text-white font-mono-terminal">{stats.olderThan30}</span> {stats.olderThan30 === 1 ? "equipo" : "equipos"} con más de 30 días sin entregar en el taller. Es prioritario resolverlos para evitar notas de crédito.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowOlderThan30(!showOlderThan30)}
+            className={`px-4 py-2 border font-mono-terminal font-bold text-[10px] tracking-wider transition-all cursor-pointer uppercase shrink-0 self-start sm:self-center select-none ${
+              showOlderThan30
+                ? "bg-red-500 border-red-600 text-black hover:bg-red-400"
+                : "bg-red-950/40 border-red-500/50 text-red-400 hover:bg-red-900/60"
+            }`}
+          >
+            {showOlderThan30 ? "Ver Todos los Equipos" : "Ver Equipos Retenidos"}
+          </button>
+        </div>
+      )}
 
       {/* Panel de Estadísticas Fijas */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
@@ -400,22 +450,37 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Reset de Filtros */}
-        {(searchQuery || dateFrom || dateTo || selectedStatus) && (
-          <div className="mt-3 flex justify-end">
+        {/* Reset de Filtros y Toggles */}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-900 pt-3.5">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowOlderThan30(!showOlderThan30)}
+              className={`px-3 py-1.5 text-[10px] font-mono-terminal transition-all cursor-pointer border uppercase rounded-none flex items-center gap-1.5 select-none ${
+                showOlderThan30
+                  ? "bg-red-950/40 border-red-500/70 text-red-400 font-bold shadow-[0_0_10px_rgba(239,68,68,0.15)]"
+                  : "bg-zinc-900 hover:bg-zinc-850 border-zinc-800 text-zinc-400 hover:text-white"
+              }`}
+            >
+              <Clock className={`w-3.5 h-3.5 ${showOlderThan30 ? "text-red-500 animate-pulse" : "text-zinc-500"}`} />
+              <span>Equipos +30 Días ({stats.olderThan30})</span>
+            </button>
+          </div>
+          
+          {(searchQuery || dateFrom || dateTo || selectedStatus || showOlderThan30) && (
             <button
               onClick={() => {
                 setSearchQuery("");
                 setDateFrom("");
                 setDateTo("");
                 setSelectedStatus(null);
+                setShowOlderThan30(false);
               }}
-              className="px-3 py-1 text-[10px] font-mono-terminal bg-zinc-900 hover:bg-zinc-850 text-zinc-400 hover:text-white transition-all cursor-pointer border border-zinc-800 uppercase rounded-none"
+              className="px-3 py-1.5 text-[10px] font-mono-terminal bg-zinc-900 hover:bg-zinc-850 text-zinc-400 hover:text-white transition-all cursor-pointer border border-zinc-800 uppercase rounded-none select-none"
             >
               Limpiar filtros
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Tabla de Resultados */}
@@ -455,6 +520,8 @@ export default function DashboardPage() {
                   {filteredCases.map((item) => {
                     const isImeiExpanded = !!expandedImeis[item.id];
                     const isProblemExpanded = !!expandedProblems[item.id];
+                    const daysDiff = getDaysDifference(item.entry_date, todayStr);
+                    const isPendingAndOlder = item.status !== "Entregado" && daysDiff >= 30;
                     
                     return (
                       <tr
@@ -527,7 +594,17 @@ export default function DashboardPage() {
 
                         {/* Fecha de entrada */}
                         <td className="p-3.5 font-mono-terminal text-zinc-400">
-                          {item.entry_date}
+                          <div className="flex flex-col gap-0.5">
+                            <span>{item.entry_date}</span>
+                            <span className={`text-[9px] flex items-center gap-0.5 ${
+                              isPendingAndOlder 
+                                ? "text-red-400 font-bold" 
+                                : "text-zinc-500"
+                            }`}>
+                              {isPendingAndOlder && <AlertTriangle className="w-2.5 h-2.5 text-red-500 shrink-0" />}
+                              <span>{daysDiff} {daysDiff === 1 ? "día" : "días"}</span>
+                            </span>
+                          </div>
                         </td>
 
                         {/* Acciones */}
@@ -577,6 +654,8 @@ export default function DashboardPage() {
               {filteredCases.map((item) => {
                 const isImeiExpanded = !!expandedImeis[item.id];
                 const isProblemExpanded = !!expandedProblems[item.id];
+                const daysDiff = getDaysDifference(item.entry_date, todayStr);
+                const isPendingAndOlder = item.status !== "Entregado" && daysDiff >= 30;
 
                 return (
                   <div
@@ -585,16 +664,24 @@ export default function DashboardPage() {
                     className="p-4 hover:bg-zinc-900/60 transition-colors cursor-pointer border-b border-zinc-900 space-y-3"
                   >
                     {/* Fila 1: Código de caso y Fecha */}
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-start">
                       <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                         <span className="font-mono-terminal text-amber-500 font-bold tracking-wider text-sm">
                           {item.case_code}
                         </span>
                         <CopyButton text={item.case_code} />
                       </div>
-                      <span className="text-[10px] font-mono-terminal text-zinc-500">
-                        {item.entry_date}
-                      </span>
+                      <div className="flex flex-col items-end">
+                        <span className="text-[10px] font-mono-terminal text-zinc-400">
+                          {item.entry_date}
+                        </span>
+                        <span className={`text-[9px] font-mono-terminal flex items-center gap-0.5 mt-0.5 ${
+                          isPendingAndOlder ? "text-red-400 font-bold" : "text-zinc-500"
+                        }`}>
+                          {isPendingAndOlder && <AlertTriangle className="w-2.5 h-2.5 text-red-500 shrink-0" />}
+                          <span>{daysDiff} {daysDiff === 1 ? "día" : "días"}</span>
+                        </span>
+                      </div>
                     </div>
 
                     {/* Fila 2: Modelo y Estado */}
