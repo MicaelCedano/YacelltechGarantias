@@ -4,9 +4,10 @@ import React, { useState, useEffect } from "react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { CopyButton } from "@/components/CopyButton";
 import { CaseDrawer, WarrantyCase } from "@/components/CaseDrawer";
+import { ExportModal } from "@/components/ExportModal";
 import { Header } from "@/components/Header";
 import { 
-  Search, Filter, RotateCw, Eye, Package, Printer, FileText
+  Search, Filter, RotateCw, Eye, Package, Printer, FileText, Download
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -23,6 +24,7 @@ export default function HistorialEquiposPage() {
   // UI Interactive States
   const [selectedCase, setSelectedCase] = useState<WarrantyCase | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [expandedImeis, setExpandedImeis] = useState<Record<string, boolean>>({});
   const [expandedProblems, setExpandedProblems] = useState<Record<string, boolean>>({});
 
@@ -136,15 +138,25 @@ export default function HistorialEquiposPage() {
             <Filter className="w-3.5 h-3.5" />
             <span>Filtros del Historial de Equipos</span>
           </div>
-          <button
-            onClick={fetchCases}
-            disabled={isLoading}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 border border-zinc-800 bg-zinc-950 hover:bg-zinc-900 text-zinc-400 hover:text-amber-500 transition-all cursor-pointer text-[10px] tracking-wider font-bold rounded-none"
-            title="Sincronizar base de datos"
-          >
-            <RotateCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin text-amber-500" : ""}`} />
-            <span>SINCRONIZAR</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsExportModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 border border-blue-800/60 bg-blue-950/40 hover:bg-blue-900/60 text-blue-400 hover:text-blue-300 transition-all cursor-pointer text-[10px] tracking-wider font-bold rounded-none"
+              title="Exportar registros a CSV/Excel o JSON"
+            >
+              <Download className="w-3.5 h-3.5 text-blue-400" />
+              <span>EXPORTAR</span>
+            </button>
+            <button
+              onClick={fetchCases}
+              disabled={isLoading}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 border border-zinc-800 bg-zinc-950 hover:bg-zinc-900 text-zinc-400 hover:text-amber-500 transition-all cursor-pointer text-[10px] tracking-wider font-bold rounded-none"
+              title="Sincronizar base de datos"
+            >
+              <RotateCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin text-amber-500" : ""}`} />
+              <span>SINCRONIZAR</span>
+            </button>
+          </div>
         </h3>
         
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -469,6 +481,14 @@ export default function HistorialEquiposPage() {
         onClose={() => setIsDrawerOpen(false)}
         onStatusUpdated={handleStatusUpdated}
         onCaseDeleted={handleCaseDeleted}
+      />
+
+      {/* Modal de Exportación */}
+      <ExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        filteredCases={filteredCases}
+        allCases={cases}
       />
     </div>
   );
